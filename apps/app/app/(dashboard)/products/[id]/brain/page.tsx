@@ -12,6 +12,7 @@ import {
 } from "@/server/actions/content";
 import { ChannelPill, TypePill } from "@/components/pills";
 import { CopyButton } from "@/components/copy-button";
+import { useUser } from "@/components/user-context";
 
 interface Avatar {
   name: string;
@@ -54,6 +55,8 @@ interface ContentPiece {
 export default function BrainPage() {
   const params = useParams();
   const router = useRouter();
+  const { role } = useUser();
+  const isAdmin = role === "admin";
   const productId = params.id as string;
 
   const [status, setStatus] = useState<"loading" | "generating" | "done" | "error">("loading");
@@ -284,20 +287,24 @@ export default function BrainPage() {
               <p className="mt-2 text-lg text-zinc-400">{output.positioning_summary}</p>
             </div>
             <div className="flex shrink-0 gap-2">
-              <button
-                onClick={handleToggleStatus}
-                disabled={togglingStatus}
-                className="rounded-lg border border-zinc-700 px-4 py-2 text-sm font-medium text-zinc-400 transition-colors hover:bg-zinc-800 hover:text-zinc-300 disabled:opacity-50"
-              >
-                {productStatus === "active" ? "Archive" : "Reactivate"}
-              </button>
-              <button
-                onClick={handleRegenerate}
-                className="rounded-lg border border-zinc-700 px-4 py-2 text-sm font-medium text-zinc-300 transition-colors hover:bg-zinc-800"
-              >
-                Regenerate
-              </button>
-              {campaigns.length > 0 && (
+              {isAdmin && (
+                <button
+                  onClick={handleToggleStatus}
+                  disabled={togglingStatus}
+                  className="rounded-lg border border-zinc-700 px-4 py-2 text-sm font-medium text-zinc-400 transition-colors hover:bg-zinc-800 hover:text-zinc-300 disabled:opacity-50"
+                >
+                  {productStatus === "active" ? "Archive" : "Reactivate"}
+                </button>
+              )}
+              {isAdmin && (
+                <button
+                  onClick={handleRegenerate}
+                  className="rounded-lg border border-zinc-700 px-4 py-2 text-sm font-medium text-zinc-300 transition-colors hover:bg-zinc-800"
+                >
+                  Regenerate
+                </button>
+              )}
+              {isAdmin && campaigns.length > 0 && (
                 <button
                   onClick={handleBulkGenerate}
                   disabled={bulkGenerating}
@@ -389,22 +396,28 @@ export default function BrainPage() {
                         </button>
                       )}
                     </div>
-                    <button
-                      onClick={() => handleGenerateContent(campaign.id)}
-                      disabled={isGenerating}
-                      className="rounded-lg border border-indigo-500/30 bg-indigo-500/10 px-3 py-1.5 text-xs font-medium text-indigo-300 transition-colors hover:bg-indigo-500/20 disabled:opacity-50"
-                    >
-                      {isGenerating ? (
-                        <span className="flex items-center gap-1.5">
-                          <span className="h-3 w-3 animate-spin rounded-full border border-indigo-300/30 border-t-indigo-300" />
-                          Generating...
-                        </span>
-                      ) : pieces && pieces.length > 0 ? (
-                        "Regenerate Content"
-                      ) : (
-                        "Generate Content"
-                      )}
-                    </button>
+                    {isAdmin ? (
+                      <button
+                        onClick={() => handleGenerateContent(campaign.id)}
+                        disabled={isGenerating}
+                        className="rounded-lg border border-indigo-500/30 bg-indigo-500/10 px-3 py-1.5 text-xs font-medium text-indigo-300 transition-colors hover:bg-indigo-500/20 disabled:opacity-50"
+                      >
+                        {isGenerating ? (
+                          <span className="flex items-center gap-1.5">
+                            <span className="h-3 w-3 animate-spin rounded-full border border-indigo-300/30 border-t-indigo-300" />
+                            Generating...
+                          </span>
+                        ) : pieces && pieces.length > 0 ? (
+                          "Regenerate Content"
+                        ) : (
+                          "Generate Content"
+                        )}
+                      </button>
+                    ) : pieces && pieces.length > 0 ? (
+                      <span className="rounded-full border border-emerald-500/30 bg-emerald-500/10 px-3 py-1 text-xs font-medium text-emerald-400">
+                        Generated
+                      </span>
+                    ) : null}
                   </div>
 
                   {/* Inline content preview */}

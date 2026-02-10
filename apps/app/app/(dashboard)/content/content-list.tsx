@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { ChannelPill, TypePill, StatusPill } from "@/components/pills";
 import { CopyButton } from "@/components/copy-button";
+import { useUser } from "@/components/user-context";
 import { updateContentPieceStatus } from "@/server/actions/content";
 
 interface ContentPieceRow {
@@ -40,13 +41,24 @@ const statusOptions = [
   { value: "archived", label: "Archived" },
 ];
 
-export function ContentList({ pieces: initialPieces }: { pieces: ContentPieceRow[] }) {
+export function ContentList({
+  pieces: initialPieces,
+  products,
+}: {
+  pieces: ContentPieceRow[];
+  products: { id: string; name: string }[];
+}) {
+  const { role } = useUser();
   const [pieces, setPieces] = useState(initialPieces);
+  const [productFilter, setProductFilter] = useState("");
   const [typeFilter, setTypeFilter] = useState("");
   const [statusFilter, setStatusFilter] = useState("");
   const [expandedId, setExpandedId] = useState<string | null>(null);
 
+  const isAdmin = role === "admin";
+
   const filtered = pieces.filter((p) => {
+    if (productFilter && p.product_id !== productFilter) return false;
     if (typeFilter && p.type !== typeFilter) return false;
     if (statusFilter && p.status !== statusFilter) return false;
     return true;
@@ -67,7 +79,19 @@ export function ContentList({ pieces: initialPieces }: { pieces: ContentPieceRow
   return (
     <>
       {/* Filters */}
-      <div className="mb-6 flex gap-3">
+      <div className="mb-6 flex flex-wrap gap-3">
+        <select
+          value={productFilter}
+          onChange={(e) => setProductFilter(e.target.value)}
+          className="rounded-lg border border-zinc-700 bg-zinc-900 px-3 py-2 text-sm text-zinc-300 focus:border-zinc-500 focus:outline-none"
+        >
+          <option value="">All products</option>
+          {products.map((p) => (
+            <option key={p.id} value={p.id}>
+              {p.name}
+            </option>
+          ))}
+        </select>
         <select
           value={typeFilter}
           onChange={(e) => setTypeFilter(e.target.value)}
@@ -105,6 +129,13 @@ export function ContentList({ pieces: initialPieces }: { pieces: ContentPieceRow
               key={piece.id}
               className="rounded-xl border border-zinc-800 bg-zinc-900/50 p-6"
             >
+              {/* Product name at top */}
+              {piece.products && (
+                <p className="mb-2 text-sm font-medium text-zinc-400">
+                  {piece.products.name}
+                </p>
+              )}
+
               <div className="flex items-start justify-between gap-4">
                 <div className="min-w-0 flex-1">
                   <div className="flex flex-wrap items-center gap-2">
@@ -113,11 +144,6 @@ export function ContentList({ pieces: initialPieces }: { pieces: ContentPieceRow
                     )}
                     <TypePill type={piece.type} />
                     <StatusPill status={piece.status} />
-                    {piece.products && (
-                      <span className="text-xs text-zinc-600">
-                        {piece.products.name}
-                      </span>
-                    )}
                   </div>
                   {piece.title && (
                     <h3 className="mt-2 font-semibold">{piece.title}</h3>
@@ -130,16 +156,18 @@ export function ContentList({ pieces: initialPieces }: { pieces: ContentPieceRow
                 </div>
                 <div className="flex shrink-0 items-center gap-2">
                   <CopyButton text={piece.body} />
-                  <select
-                    value={piece.status}
-                    onChange={(e) => handleStatusChange(piece.id, e.target.value)}
-                    className="rounded border border-zinc-700 bg-zinc-800 px-2 py-1 text-xs text-zinc-400 focus:border-zinc-500 focus:outline-none"
-                  >
-                    <option value="draft">Draft</option>
-                    <option value="ready">Ready</option>
-                    <option value="published">Published</option>
-                    <option value="archived">Archived</option>
-                  </select>
+                  {isAdmin && (
+                    <select
+                      value={piece.status}
+                      onChange={(e) => handleStatusChange(piece.id, e.target.value)}
+                      className="rounded border border-zinc-700 bg-zinc-800 px-2 py-1 text-xs text-zinc-400 focus:border-zinc-500 focus:outline-none"
+                    >
+                      <option value="draft">Draft</option>
+                      <option value="ready">Ready</option>
+                      <option value="published">Published</option>
+                      <option value="archived">Archived</option>
+                    </select>
+                  )}
                 </div>
               </div>
 

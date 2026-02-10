@@ -16,3 +16,23 @@ export async function requireAuth() {
   }
   return user;
 }
+
+export async function getUserWithRole() {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (!user) return { user: null, role: "free" as const };
+
+  const { data: profile } = await supabase
+    .from("profiles")
+    .select("role")
+    .eq("id", user.id)
+    .single();
+
+  return {
+    user,
+    role: (profile?.role ?? "free") as "admin" | "paid" | "free",
+  };
+}

@@ -11,6 +11,12 @@ export default async function ContentPage() {
     )
     .order("created_at", { ascending: false });
 
+  // Get unique products for the filter dropdown
+  const { data: products } = await supabase
+    .from("products")
+    .select("id, name")
+    .order("name");
+
   return (
     <>
       <div className="mb-8">
@@ -21,7 +27,10 @@ export default async function ContentPage() {
       </div>
 
       {pieces && pieces.length > 0 ? (
-        <ContentList pieces={pieces as any} />
+        <ContentList
+          pieces={pieces as any}
+          products={(products ?? []) as { id: string; name: string }[]}
+        />
       ) : (
         <div className="rounded-xl border border-dashed border-zinc-700 p-12 text-center">
           <h2 className="text-lg font-semibold">No content yet</h2>
