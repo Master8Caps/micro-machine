@@ -1,5 +1,5 @@
 import { AnimateOnScroll } from "./animate-on-scroll";
-import { WaitlistForm } from "./waitlist-form";
+import { WaitlistButton } from "./waitlist-form";
 
 export function CTA() {
   return (
@@ -27,8 +27,8 @@ export function CTA() {
         </AnimateOnScroll>
 
         <AnimateOnScroll delay={200}>
-          <div className="mx-auto mt-10 max-w-2xl">
-            <WaitlistForm source="cta" />
+          <div className="mt-10">
+            <WaitlistButton source="cta" />
             <p className="mt-4 text-sm text-zinc-500">
               Early access opening soon. Join the waitlist to be first in line.
             </p>

@@ -1,5 +1,5 @@
 import { AnimateOnScroll } from "./animate-on-scroll";
-import { WaitlistFormCompact } from "./waitlist-form";
+import { WaitlistButton } from "./waitlist-form";
 
 export function Hero() {
   return (
@@ -28,8 +28,8 @@ export function Hero() {
         </AnimateOnScroll>
 
         <AnimateOnScroll delay={200}>
-          <div className="mx-auto mt-10 max-w-lg">
-            <WaitlistFormCompact source="hero" />
+          <div className="mt-10">
+            <WaitlistButton source="hero" />
             <p className="mt-3 text-sm text-zinc-500">
               Join the waitlist for early access. No spam, ever.
             </p>
