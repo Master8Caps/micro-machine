@@ -1,4 +1,5 @@
 import { AnimateOnScroll } from "./animate-on-scroll";
+import { GlowCard } from "./glow-card";
 
 const values = [
   {
@@ -44,8 +45,8 @@ export function Value() {
         <div className="mt-16 grid gap-8 md:grid-cols-3">
           {values.map((value, i) => (
             <AnimateOnScroll key={value.step} delay={i * 120}>
-              <div className="text-center">
-                <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full border border-zinc-700 bg-zinc-800 text-sm font-bold text-zinc-300">
+              <GlowCard className="p-6 text-center">
+                <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full border border-blue-500/30 bg-blue-500/10 text-sm font-bold text-blue-400">
                   {value.step}
                 </div>
                 <p className="mt-5 text-sm font-medium uppercase tracking-wider text-zinc-500">
@@ -57,7 +58,7 @@ export function Value() {
                 <p className="mt-3 leading-relaxed text-zinc-400">
                   {value.description}
                 </p>
-              </div>
+              </GlowCard>
             </AnimateOnScroll>
           ))}
         </div>

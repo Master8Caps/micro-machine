@@ -1,4 +1,5 @@
 import { AnimateOnScroll } from "./animate-on-scroll";
+import { GlowCard } from "./glow-card";
 
 const problems = [
   {
@@ -42,14 +43,14 @@ export function Problem() {
         <div className="mt-16 grid gap-6 md:grid-cols-2">
           {problems.map((problem, i) => (
             <AnimateOnScroll key={problem.title} delay={i * 100}>
-              <div className="rounded-xl border border-zinc-800 bg-zinc-900/50 p-6 transition-colors hover:border-zinc-700 hover:bg-zinc-900">
+              <GlowCard className="p-6">
                 <h3 className="text-lg font-semibold text-zinc-100">
                   {problem.title}
                 </h3>
                 <p className="mt-2 leading-relaxed text-zinc-400">
                   {problem.description}
                 </p>
-              </div>
+              </GlowCard>
             </AnimateOnScroll>
           ))}
         </div>

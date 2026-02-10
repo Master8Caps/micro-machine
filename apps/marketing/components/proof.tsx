@@ -1,4 +1,5 @@
 import { AnimateOnScroll } from "./animate-on-scroll";
+import { GlowCard } from "./glow-card";
 
 const stats = [
   { value: "3", label: "Internal products launched using this system" },
@@ -25,18 +26,18 @@ export function Proof() {
         <div className="mt-16 grid gap-6 md:grid-cols-3">
           {stats.map((stat, i) => (
             <AnimateOnScroll key={stat.label} delay={i * 100}>
-              <div className="rounded-xl border border-zinc-800 bg-zinc-900/50 p-8 text-center transition-colors hover:border-zinc-700">
-                <div className="text-4xl font-bold text-zinc-100">
+              <GlowCard className="p-8 text-center">
+                <div className="text-4xl font-bold bg-gradient-to-r from-blue-400 to-cyan-400 bg-clip-text text-transparent">
                   {stat.value}
                 </div>
                 <p className="mt-2 text-sm text-zinc-400">{stat.label}</p>
-              </div>
+              </GlowCard>
             </AnimateOnScroll>
           ))}
         </div>
 
         <AnimateOnScroll delay={300}>
-          <blockquote className="mx-auto mt-12 max-w-2xl border-l-2 border-zinc-700 pl-6">
+          <blockquote className="mx-auto mt-12 max-w-2xl border-l-2 border-blue-500/30 pl-6">
             <p className="text-lg leading-relaxed italic text-zinc-300">
               &ldquo;This replaced four separate tools and a spreadsheet. We
               went from scattered posting to a structured system in one

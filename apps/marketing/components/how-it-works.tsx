@@ -1,4 +1,5 @@
 import { AnimateOnScroll } from "./animate-on-scroll";
+import { GlowCard } from "./glow-card";
 
 const steps = [
   {
@@ -40,11 +41,11 @@ export function HowItWorks() {
           </div>
         </AnimateOnScroll>
 
-        <div className="mt-16 grid gap-12 md:grid-cols-3">
+        <div className="mt-16 grid gap-8 md:grid-cols-3">
           {steps.map((step, i) => (
             <AnimateOnScroll key={step.number} delay={i * 120}>
-              <div>
-                <div className="text-5xl font-bold text-zinc-800">
+              <GlowCard className="p-6">
+                <div className="text-5xl font-bold bg-gradient-to-r from-blue-400 to-cyan-400 bg-clip-text text-transparent">
                   {step.number}
                 </div>
                 <h3 className="mt-4 text-xl font-semibold text-zinc-100">
@@ -53,7 +54,7 @@ export function HowItWorks() {
                 <p className="mt-3 leading-relaxed text-zinc-400">
                   {step.description}
                 </p>
-              </div>
+              </GlowCard>
             </AnimateOnScroll>
           ))}
         </div>
