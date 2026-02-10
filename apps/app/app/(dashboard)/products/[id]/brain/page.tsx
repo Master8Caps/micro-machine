@@ -147,6 +147,15 @@ export default function BrainPage() {
       }
 
       setOutput(genResult.output as BrainOutput);
+
+      // Reload saved data from DB (campaigns, ad campaigns, website kit)
+      const reloaded = await loadBrain({ productId });
+      if (!cancelled) {
+        if (reloaded.socialCampaigns) setSocialCampaigns(reloaded.socialCampaigns as DbCampaign[]);
+        if (reloaded.adCampaigns) setAdCampaigns(reloaded.adCampaigns as DbCampaign[]);
+        if (reloaded.websiteKitPieces) setWebsiteKitPieces(reloaded.websiteKitPieces as WebsiteKitPiece[]);
+      }
+
       setStatus("done");
     }
 
@@ -461,7 +470,7 @@ export default function BrainPage() {
             ) : (
               <div className="mt-6 rounded-xl border border-dashed border-zinc-700 p-8 text-center">
                 <p className="text-sm text-zinc-500">
-                  No ad campaigns generated yet. Regenerate the brain to include ad campaigns.
+                  No ad campaigns generated yet. Try regenerating the brain above.
                 </p>
               </div>
             )}
@@ -492,7 +501,7 @@ export default function BrainPage() {
             ) : (
               <div className="mt-6 rounded-xl border border-dashed border-zinc-700 p-8 text-center">
                 <p className="text-sm text-zinc-500">
-                  No website kit generated yet. Regenerate the brain to include website copy.
+                  No website kit generated yet. Try regenerating the brain above.
                 </p>
               </div>
             )}
