@@ -43,7 +43,7 @@ export function HowItWorks() {
 
         <div className="mt-16 grid gap-8 md:grid-cols-3">
           {steps.map((step, i) => (
-            <AnimateOnScroll key={step.number} delay={i * 120}>
+            <AnimateOnScroll key={step.number} delay={i * 120} className="h-full">
               <GlowCard className="p-6">
                 <div className="text-5xl font-bold bg-gradient-to-r from-blue-400 to-cyan-400 bg-clip-text text-transparent">
                   {step.number}

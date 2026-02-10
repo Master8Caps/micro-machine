@@ -25,7 +25,7 @@ export function Proof() {
 
         <div className="mt-16 grid gap-6 md:grid-cols-3">
           {stats.map((stat, i) => (
-            <AnimateOnScroll key={stat.label} delay={i * 100}>
+            <AnimateOnScroll key={stat.label} delay={i * 100} className="h-full">
               <GlowCard className="p-8 text-center">
                 <div className="text-4xl font-bold bg-gradient-to-r from-blue-400 to-cyan-400 bg-clip-text text-transparent">
                   {stat.value}

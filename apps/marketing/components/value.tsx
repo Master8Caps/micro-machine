@@ -44,7 +44,7 @@ export function Value() {
 
         <div className="mt-16 grid gap-8 md:grid-cols-3">
           {values.map((value, i) => (
-            <AnimateOnScroll key={value.step} delay={i * 120}>
+            <AnimateOnScroll key={value.step} delay={i * 120} className="h-full">
               <GlowCard className="p-6 text-center">
                 <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full border border-blue-500/30 bg-blue-500/10 text-sm font-bold text-blue-400">
                   {value.step}

@@ -24,7 +24,7 @@ export function GlowCard({ children, className = "" }: GlowCardProps) {
       onMouseMove={handleMouseMove}
       onMouseEnter={() => setOpacity(1)}
       onMouseLeave={() => setOpacity(0)}
-      className={`group relative overflow-hidden rounded-xl border border-blue-500/20 bg-zinc-900/50 transition-colors hover:border-blue-400/40 ${className}`}
+      className={`group relative h-full overflow-hidden rounded-xl border border-blue-500/20 bg-zinc-900/50 transition-colors hover:border-blue-400/40 ${className}`}
     >
       {/* Cursor glow */}
       <div

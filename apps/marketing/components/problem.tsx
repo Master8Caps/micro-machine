@@ -42,7 +42,7 @@ export function Problem() {
 
         <div className="mt-16 grid gap-6 md:grid-cols-2">
           {problems.map((problem, i) => (
-            <AnimateOnScroll key={problem.title} delay={i * 100}>
+            <AnimateOnScroll key={problem.title} delay={i * 100} className="h-full">
               <GlowCard className="p-6">
                 <h3 className="text-lg font-semibold text-zinc-100">
                   {problem.title}
