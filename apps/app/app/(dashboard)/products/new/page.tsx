@@ -107,7 +107,7 @@ export default function NewProductPage() {
                   type="text"
                   value={description}
                   onChange={(e) => setDescription(e.target.value)}
-                  placeholder="e.g. Automated invoicing for freelancers who hate chasing payments"
+                  placeholder="e.g. Automated invoicing for freelancers"
                   className="mt-1 block w-full rounded-lg border border-zinc-700 bg-zinc-900 px-3 py-2 text-zinc-100 placeholder-zinc-500 focus:border-zinc-500 focus:outline-none focus:ring-1 focus:ring-zinc-500"
                 />
               </div>

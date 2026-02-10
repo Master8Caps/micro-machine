@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { createPortal } from "react-dom";
 
 interface WaitlistButtonProps {
   source?: string;
@@ -27,7 +28,10 @@ export function WaitlistButton({
       >
         {label}
       </button>
-      {open && <WaitlistModal source={source} onClose={() => setOpen(false)} />}
+      {open && createPortal(
+        <WaitlistModal source={source} onClose={() => setOpen(false)} />,
+        document.body,
+      )}
     </>
   );
 }
