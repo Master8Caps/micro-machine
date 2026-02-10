@@ -10,6 +10,7 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
+    "@anthropic-ai/sdk": "^0.74.0",
     "@repo/types": "workspace:*",
     "@repo/ui": "workspace:*",
     "@supabase/ssr": "^0.8.0",
