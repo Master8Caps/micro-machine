@@ -15,7 +15,9 @@
 -- 1. Extensions
 -- ============================================
 
-create extension if not exists "pgvector" with schema "extensions";
+-- pgvector will be enabled later when embedding columns are added.
+-- create extension if not exists "vector" with schema "extensions";
+
 create extension if not exists "moddatetime" with schema "extensions";
 
 
