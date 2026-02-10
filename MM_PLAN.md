@@ -61,6 +61,7 @@ Micro Machine is an internal-first SaaS product that turns a simple product brie
 - [x] Protected routes via middleware (session refresh + route protection)
 - [x] User roles system (admin, free, paid) — migration 00002
 - [x] Content workstreams separation — migration 00004 (has_website, wants_ads, campaign categories, expanded content types)
+- [x] Archived separated from workflow status — migration 00005 (archived boolean on campaigns + content_pieces, removed from status constraint)
 
 ### Marketing Site
 - [x] 7-section conversion page (hero, problem, value, how-it-works, proof, CTA, footer)
@@ -124,12 +125,21 @@ Micro Machine is an internal-first SaaS product that turns a simple product brie
 - [x] Category filter: All / Social / Ads / Website
 - [x] Product filter dropdown
 - [x] Type filter dropdown (all content types including website kit types)
-- [x] Status filter dropdown
+- [x] Status filter dropdown (Draft/Ready/Published)
+- [x] "Show archived" checkbox (archived hidden by default)
 - [x] Content count display
 - [x] Product name prominent on each card
 - [x] Campaign angle as subtitle
 - [x] Expandable body preview (line-clamp-3)
 - [x] Copy-to-clipboard on each piece
+
+### App — Archiving & Status
+- [x] Archived is a separate boolean flag, not a status value
+- [x] Workflow status (draft/ready/published) preserved when archiving — e.g. "Published, Archived"
+- [x] Product archive cascades: sets `archived=true` on all campaigns and content pieces (preserves their workflow status)
+- [x] Product reactivate cascades: sets `archived=false` on all campaigns and content pieces
+- [x] Archive toggle button on each content piece (content page + campaign panel)
+- [x] "Show archived" filter on content page (hidden by default)
 
 ### App — Role-Based Access
 - [x] `getUserWithRole()` in server/auth.ts
@@ -144,7 +154,9 @@ Micro Machine is an internal-first SaaS product that turns a simple product brie
 - [x] `ChannelPill` — platform-colored (LinkedIn, X, Reddit, Product Hunt, Indie Hackers, Email, Blog, Meta, Google, TikTok, LinkedIn Ads)
 - [x] `TypePill` — indigo tint, format-specific labels (Text Post, Thread, Video Hook, Image Post, Landing Page, Email Sequence, Meta Description, Tagline, etc.)
 - [x] `StatusPill` — active/published (emerald), draft (amber), archived (zinc), ready (blue)
-- [x] `StatusSelect` — colored dropdown that looks like a pill but is selectable
+- [x] `StatusSelect` — colored dropdown that looks like a pill but is selectable (Draft/Ready/Published only)
+- [x] `ArchivedBadge` — gray "Archived" pill, shown alongside workflow status
+- [x] `ArchiveToggle` — archive/unarchive icon button on content pieces
 - [x] `CopyButton` — clipboard icon with green checkmark feedback
 - [x] `GlowCard` — cursor-following radial gradient glow (marketing site)
 
@@ -152,20 +164,30 @@ Micro Machine is an internal-first SaaS product that turns a simple product brie
 
 ## Things to Test Now
 
-1. **New product with website + ads** — Create a product, enable website and ads on step 4, generate brain. Verify:
+1. **Run migration 00005** — Run `00005_separate_archived_flag.sql` in Supabase SQL Editor. Verify:
+   - `archived` column exists on campaigns and content_pieces (defaults to false)
+   - Any previously archived content pieces are migrated (archived=true, status reverted to draft)
+   - content_pieces status constraint only allows draft/ready/published
+2. **Archive cascade** — Archive a product from the brain page. Verify:
+   - All its campaigns get `archived=true` (status unchanged)
+   - All its content pieces get `archived=true` (status unchanged)
+   - Reactivating the product sets `archived=false` on campaigns and content
+3. **Content page archiving** — Verify:
+   - StatusSelect only shows Draft/Ready/Published (no Archived option)
+   - Archive toggle button appears on each content piece
+   - Clicking archive toggle shows the "Archived" badge next to the status
+   - Archived pieces hidden by default, visible when "Show archived" checked
+   - A published piece can be archived and still shows "Published, Archived"
+4. **Campaign panel archiving** — Open a campaign slide-over, verify:
+   - Archive toggle + badge work on content pieces within the panel
+5. **New product with website + ads** — Create a product, enable website and ads on step 4, generate brain. Verify:
    - Social campaigns section populates with varied content types
    - Ad campaigns section populates with retargeting + cold traffic angles
    - Website kit section populates (landing page, emails, meta desc, taglines)
    - All three sections load immediately (not empty on first generation)
-2. **New product WITHOUT website/ads** — Create a product with only social channels. Verify:
-   - Only social campaigns section shows
-   - Ad campaigns and website kit sections are hidden
-3. **Content generation** — Click "Generate Content" on a social campaign, verify 2-3 pieces appear with copy buttons
-4. **Bulk generation** — Click "Generate All Social Content", verify all campaigns get content
-5. **Campaigns page** — Verify Social/Ads tabs work, filters scope correctly, slide-over panel opens
-6. **Content page** — Verify category filter (Social/Ads/Website), product filter, type filter all work
-7. **Role gating** — As admin, verify generate/regenerate buttons show. Change role to 'free' in Supabase → verify buttons hidden, "Generated" badges shown instead
-8. **Existing products** — Verify old products still work (social campaigns display, no errors from missing category column)
+6. **Content generation** — Click "Generate Content" on a social campaign, verify 2-3 pieces appear
+7. **Campaigns page** — Verify Social/Ads tabs work, filters scope correctly, slide-over panel opens
+8. **Content page** — Verify category filter (Social/Ads/Website), product filter, type filter all work
 
 ---
 
@@ -209,6 +231,7 @@ Micro Machine is an internal-first SaaS product that turns a simple product brie
 | 00002 | `00002_add_roles_and_waitlist.sql` | User roles + waitlist table | Applied |
 | 00003 | `00003_add_generations_update_policy.sql` | Fix: RLS update policy on generations | Applied |
 | 00004 | `00004_content_workstreams.sql` | Content workstreams — has_website, wants_ads, campaign categories, expanded content types | Applied |
+| 00005 | `00005_separate_archived_flag.sql` | Separate archived from status — archived boolean on campaigns + content_pieces | Pending |
 
 ---
 
@@ -234,3 +257,5 @@ Micro Machine is an internal-first SaaS product that turns a simple product brie
 | 2026-02-10 | Website kit: full kit | Landing page, 3 welcome emails, meta description, 3 taglines |
 | 2026-02-10 | Archive only, no delete | CASCADE deletes would destroy all generated content permanently |
 | 2026-02-10 | Status management available to all users | Changing content status (draft/ready/published) is not admin-only |
+| 2026-02-10 | Archived is a boolean flag, not a status | Preserves workflow status when archiving — "Published, Archived" instead of losing the original status |
+| 2026-02-10 | Product archive cascades via archived flag | Sets archived=true on campaigns + content without touching workflow status |
