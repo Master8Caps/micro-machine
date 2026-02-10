@@ -112,10 +112,10 @@ export function StatusSelect({
       onChange={(e) => onChange(e.target.value)}
       className={`cursor-pointer appearance-none rounded-full border px-2.5 py-0.5 text-xs font-medium focus:outline-none ${style}`}
     >
-      <option value="draft">Draft</option>
-      <option value="ready">Ready</option>
-      <option value="published">Published</option>
-      <option value="archived">Archived</option>
+      <option value="draft" className="bg-zinc-900 text-zinc-200">Draft</option>
+      <option value="ready" className="bg-zinc-900 text-zinc-200">Ready</option>
+      <option value="published" className="bg-zinc-900 text-zinc-200">Published</option>
+      <option value="archived" className="bg-zinc-900 text-zinc-200">Archived</option>
     </select>
   );
 }
