@@ -5,6 +5,13 @@ import { useParams, useRouter } from "next/navigation";
 import { generateBrain } from "@/server/actions/brain";
 import { loadBrain } from "@/server/actions/brain-load";
 import { updateProductStatus } from "@/server/actions/products";
+import {
+  generateContentForCampaign,
+  generateContentBulk,
+  loadContentForCampaign,
+} from "@/server/actions/content";
+import { ChannelPill, TypePill } from "@/components/pills";
+import { CopyButton } from "@/components/copy-button";
 
 interface Avatar {
   name: string;
@@ -18,71 +25,30 @@ interface Avatar {
   };
 }
 
-interface Campaign {
-  avatar_name: string;
+interface BrainOutput {
+  avatars: Avatar[];
+  campaigns: unknown[];
+  positioning_summary: string;
+}
+
+interface DbCampaign {
+  id: string;
+  avatar_id: string;
   angle: string;
   channel: string;
   hook: string;
   content_type: string;
-  why_it_works: string;
+  status: string;
 }
 
-interface BrainOutput {
-  avatars: Avatar[];
-  campaigns: Campaign[];
-  positioning_summary: string;
-}
-
-// ── Channel pill colors ──────────────────────────────
-const channelStyles: Record<string, string> = {
-  linkedin: "border-blue-500/30 bg-blue-500/10 text-blue-400",
-  "x / twitter": "border-zinc-400/30 bg-zinc-400/10 text-zinc-300",
-  "x/twitter": "border-zinc-400/30 bg-zinc-400/10 text-zinc-300",
-  twitter: "border-zinc-400/30 bg-zinc-400/10 text-zinc-300",
-  x: "border-zinc-400/30 bg-zinc-400/10 text-zinc-300",
-  reddit: "border-orange-500/30 bg-orange-500/10 text-orange-400",
-  "product hunt": "border-rose-500/30 bg-rose-500/10 text-rose-400",
-  "indie hackers": "border-cyan-500/30 bg-cyan-500/10 text-cyan-400",
-  email: "border-purple-500/30 bg-purple-500/10 text-purple-400",
-  "blog / seo": "border-green-500/30 bg-green-500/10 text-green-400",
-  blog: "border-green-500/30 bg-green-500/10 text-green-400",
-  seo: "border-green-500/30 bg-green-500/10 text-green-400",
-  "paid ads": "border-amber-500/30 bg-amber-500/10 text-amber-400",
-};
-
-function getChannelStyle(channel: string) {
-  return (
-    channelStyles[channel.toLowerCase()] ??
-    "border-zinc-600/30 bg-zinc-600/10 text-zinc-400"
-  );
-}
-
-// ── Format content type ──────────────────────────────
-function formatContentType(type: string) {
-  return type
-    .split("-")
-    .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
-    .join(" ");
-}
-
-// ── Channel pill component ───────────────────────────
-function ChannelPill({ channel }: { channel: string }) {
-  return (
-    <span
-      className={`rounded-full border px-2.5 py-0.5 text-xs font-medium ${getChannelStyle(channel)}`}
-    >
-      {channel}
-    </span>
-  );
-}
-
-// ── Content type pill ────────────────────────────────
-function TypePill({ type }: { type: string }) {
-  return (
-    <span className="rounded-md border border-indigo-500/20 bg-indigo-500/5 px-2 py-0.5 text-xs text-indigo-300/70">
-      {formatContentType(type)}
-    </span>
-  );
+interface ContentPiece {
+  id: string;
+  type: string;
+  title: string;
+  body: string;
+  metadata: { cta_text?: string; notes?: string };
+  status: string;
+  created_at: string;
 }
 
 export default function BrainPage() {
@@ -90,13 +56,18 @@ export default function BrainPage() {
   const router = useRouter();
   const productId = params.id as string;
 
-  const [status, setStatus] = useState<"loading" | "generating" | "done" | "error">(
-    "loading",
-  );
+  const [status, setStatus] = useState<"loading" | "generating" | "done" | "error">("loading");
   const [output, setOutput] = useState<BrainOutput | null>(null);
+  const [campaigns, setCampaigns] = useState<DbCampaign[]>([]);
   const [error, setError] = useState("");
   const [productStatus, setProductStatus] = useState<string>("active");
   const [togglingStatus, setTogglingStatus] = useState(false);
+
+  // Content generation state
+  const [contentByCampaign, setContentByCampaign] = useState<Record<string, ContentPiece[]>>({});
+  const [generatingCampaigns, setGeneratingCampaigns] = useState<Set<string>>(new Set());
+  const [bulkGenerating, setBulkGenerating] = useState(false);
+  const [expandedCampaigns, setExpandedCampaigns] = useState<Set<string>>(new Set());
 
   useEffect(() => {
     let cancelled = false;
@@ -106,13 +77,35 @@ export default function BrainPage() {
 
       if (cancelled) return;
 
+      if (result.campaigns) setCampaigns(result.campaigns as DbCampaign[]);
+      if (result.productStatus) setProductStatus(result.productStatus);
+
+      // Load existing content for each campaign
+      if (result.campaigns && result.contentCounts) {
+        const counts = result.contentCounts as Record<string, number>;
+        const campaignsWithContent = (result.campaigns as DbCampaign[]).filter(
+          (c) => (counts[c.id] ?? 0) > 0,
+        );
+        const contentResults = await Promise.all(
+          campaignsWithContent.map((c) => loadContentForCampaign(c.id)),
+        );
+        if (!cancelled) {
+          const contentMap: Record<string, ContentPiece[]> = {};
+          campaignsWithContent.forEach((c, i) => {
+            const res = contentResults[i];
+            if (res.pieces) contentMap[c.id] = res.pieces as ContentPiece[];
+          });
+          setContentByCampaign(contentMap);
+        }
+      }
+
       if (result.output) {
         setOutput(result.output as BrainOutput);
-        if (result.productStatus) setProductStatus(result.productStatus);
         setStatus("done");
         return;
       }
 
+      // No existing results — generate
       setStatus("generating");
       const genResult = await generateBrain({ productId });
 
@@ -143,6 +136,10 @@ export default function BrainPage() {
       setStatus("error");
     } else {
       setOutput(result.output as BrainOutput);
+      // Reload campaigns from DB
+      const reloaded = await loadBrain({ productId });
+      if (reloaded.campaigns) setCampaigns(reloaded.campaigns as DbCampaign[]);
+      setContentByCampaign({});
       setStatus("done");
     }
   }, [productId]);
@@ -157,6 +154,53 @@ export default function BrainPage() {
     setTogglingStatus(false);
   }
 
+  const handleGenerateContent = useCallback(
+    async (campaignId: string) => {
+      setGeneratingCampaigns((prev) => new Set(prev).add(campaignId));
+      const result = await generateContentForCampaign({ campaignId, productId });
+      setGeneratingCampaigns((prev) => {
+        const next = new Set(prev);
+        next.delete(campaignId);
+        return next;
+      });
+      if (result.pieces) {
+        setContentByCampaign((prev) => ({
+          ...prev,
+          [campaignId]: result.pieces as ContentPiece[],
+        }));
+        setExpandedCampaigns((prev) => new Set(prev).add(campaignId));
+      }
+    },
+    [productId],
+  );
+
+  const handleBulkGenerate = useCallback(async () => {
+    setBulkGenerating(true);
+    const ids = campaigns.map((c) => c.id);
+    setGeneratingCampaigns(new Set(ids));
+
+    const result = await generateContentBulk({ productId, campaignIds: ids });
+
+    const newContent: Record<string, ContentPiece[]> = { ...contentByCampaign };
+    for (const success of result.successes) {
+      newContent[success.campaignId] = success.pieces as ContentPiece[];
+    }
+    setContentByCampaign(newContent);
+    setExpandedCampaigns(new Set(ids));
+    setGeneratingCampaigns(new Set());
+    setBulkGenerating(false);
+  }, [productId, campaigns, contentByCampaign]);
+
+  function toggleExpanded(campaignId: string) {
+    setExpandedCampaigns((prev) => {
+      const next = new Set(prev);
+      if (next.has(campaignId)) next.delete(campaignId);
+      else next.add(campaignId);
+      return next;
+    });
+  }
+
+  // ── Loading / generating / error states ────────────
   if (status === "loading") {
     return (
       <div className="flex min-h-[60vh] items-center justify-center">
@@ -174,12 +218,9 @@ export default function BrainPage() {
             Generating your Marketing Brain
           </h1>
           <p className="mt-2 text-zinc-400">
-            Analyzing your product, identifying avatars, and creating campaign
-            angles...
+            Analyzing your product, identifying avatars, and creating campaign angles...
           </p>
-          <p className="mt-1 text-sm text-zinc-500">
-            This usually takes 15-30 seconds.
-          </p>
+          <p className="mt-1 text-sm text-zinc-500">This usually takes 15-30 seconds.</p>
         </div>
       </div>
     );
@@ -189,9 +230,7 @@ export default function BrainPage() {
     return (
       <div className="flex min-h-[60vh] items-center justify-center">
         <div className="text-center">
-          <h1 className="font-heading text-2xl font-bold text-red-400">
-            Generation failed
-          </h1>
+          <h1 className="font-heading text-2xl font-bold text-red-400">Generation failed</h1>
           <p className="mt-2 text-zinc-400">{error}</p>
           <button
             onClick={handleRegenerate}
@@ -212,6 +251,17 @@ export default function BrainPage() {
       ? "border-emerald-500/30 bg-emerald-500/10 text-emerald-400"
       : "border-zinc-600/30 bg-zinc-600/10 text-zinc-500";
 
+  // Find avatar name for a campaign
+  function getAvatarName(campaign: DbCampaign): string {
+    const rawCampaign = (output as BrainOutput & { campaigns: { avatar_name: string; angle: string }[] })
+      .campaigns?.find(
+        (rc: { angle: string }) => rc.angle === campaign.angle,
+      ) as { avatar_name?: string } | undefined;
+    return rawCampaign?.avatar_name ?? "";
+  }
+
+  const sortedCampaigns = [...campaigns].sort((a, b) => a.channel.localeCompare(b.channel));
+
   return (
     <div className="py-4">
       <div className="mx-auto max-w-4xl">
@@ -226,18 +276,12 @@ export default function BrainPage() {
           <div className="mt-4 flex items-start justify-between gap-4">
             <div className="min-w-0 flex-1">
               <div className="flex items-center gap-3">
-                <h1 className="font-heading text-3xl font-bold">
-                  Marketing Brain
-                </h1>
-                <span
-                  className={`rounded-full border px-2.5 py-0.5 text-xs font-medium ${statusStyle}`}
-                >
+                <h1 className="font-heading text-3xl font-bold">Marketing Brain</h1>
+                <span className={`rounded-full border px-2.5 py-0.5 text-xs font-medium ${statusStyle}`}>
                   {statusLabel}
                 </span>
               </div>
-              <p className="mt-2 text-lg text-zinc-400">
-                {output.positioning_summary}
-              </p>
+              <p className="mt-2 text-lg text-zinc-400">{output.positioning_summary}</p>
             </div>
             <div className="flex shrink-0 gap-2">
               <button
@@ -253,6 +297,15 @@ export default function BrainPage() {
               >
                 Regenerate
               </button>
+              {campaigns.length > 0 && (
+                <button
+                  onClick={handleBulkGenerate}
+                  disabled={bulkGenerating}
+                  className="rounded-lg bg-indigo-600 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-indigo-500 disabled:opacity-50"
+                >
+                  {bulkGenerating ? "Generating..." : "Generate All Content"}
+                </button>
+              )}
             </div>
           </div>
         </div>
@@ -262,32 +315,21 @@ export default function BrainPage() {
           <h2 className="text-xl font-bold">Target Avatars</h2>
           <div className="mt-6 grid gap-6 md:grid-cols-2 lg:grid-cols-3">
             {output.avatars.map((avatar) => (
-              <div
-                key={avatar.name}
-                className="flex flex-col rounded-xl border border-zinc-800 bg-zinc-900/50 p-6"
-              >
+              <div key={avatar.name} className="flex flex-col rounded-xl border border-zinc-800 bg-zinc-900/50 p-6">
                 <h3 className="text-lg font-semibold">{avatar.name}</h3>
-                <p className="mt-2 text-sm text-zinc-400">
-                  {avatar.description}
-                </p>
+                <p className="mt-2 text-sm text-zinc-400">{avatar.description}</p>
 
                 <div className="mt-4">
-                  <p className="text-xs font-medium uppercase tracking-wider text-zinc-500">
-                    Pain points
-                  </p>
+                  <p className="text-xs font-medium uppercase tracking-wider text-zinc-500">Pain points</p>
                   <ul className="mt-2 space-y-1">
                     {avatar.pain_points.map((point) => (
-                      <li key={point} className="text-sm text-zinc-300">
-                        &bull; {point}
-                      </li>
+                      <li key={point} className="text-sm text-zinc-300">&bull; {point}</li>
                     ))}
                   </ul>
                 </div>
 
                 <div className="mt-4">
-                  <p className="text-xs font-medium uppercase tracking-wider text-zinc-500">
-                    Channels
-                  </p>
+                  <p className="text-xs font-medium uppercase tracking-wider text-zinc-500">Channels</p>
                   <div className="mt-2 flex flex-wrap gap-1.5">
                     {[...avatar.channels].sort((a, b) => a.localeCompare(b)).map((channel) => (
                       <ChannelPill key={channel} channel={channel} />
@@ -298,16 +340,13 @@ export default function BrainPage() {
                 <div className="mt-auto pt-4">
                   <div className="rounded-lg bg-zinc-800/50 p-3">
                     <p className="text-xs text-zinc-500">
-                      <strong className="text-zinc-400">Role:</strong>{" "}
-                      {avatar.icp_details.role}
+                      <strong className="text-zinc-400">Role:</strong> {avatar.icp_details.role}
                     </p>
                     <p className="mt-1 text-xs text-zinc-500">
-                      <strong className="text-zinc-400">Context:</strong>{" "}
-                      {avatar.icp_details.context}
+                      <strong className="text-zinc-400">Context:</strong> {avatar.icp_details.context}
                     </p>
                     <p className="mt-1 text-xs text-zinc-500">
-                      <strong className="text-zinc-400">Motivation:</strong>{" "}
-                      {avatar.icp_details.motivation}
+                      <strong className="text-zinc-400">Motivation:</strong> {avatar.icp_details.motivation}
                     </p>
                   </div>
                 </div>
@@ -320,27 +359,72 @@ export default function BrainPage() {
         <section className="mb-12">
           <h2 className="text-xl font-bold">Campaign Angles</h2>
           <div className="mt-6 space-y-4">
-            {[...output.campaigns].sort((a, b) => a.channel.localeCompare(b.channel)).map((campaign, i) => (
-              <div
-                key={i}
-                className="rounded-xl border border-zinc-800 bg-zinc-900/50 p-6"
-              >
-                <div className="flex flex-wrap items-center gap-2">
-                  <ChannelPill channel={campaign.channel} />
-                  <TypePill type={campaign.content_type} />
-                  <span className="text-xs text-zinc-500">
-                    for {campaign.avatar_name}
-                  </span>
+            {sortedCampaigns.map((campaign) => {
+              const avatarName = getAvatarName(campaign);
+              const pieces = contentByCampaign[campaign.id];
+              const isGenerating = generatingCampaigns.has(campaign.id);
+              const isExpanded = expandedCampaigns.has(campaign.id);
+
+              return (
+                <div key={campaign.id} className="rounded-xl border border-zinc-800 bg-zinc-900/50 p-6">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <ChannelPill channel={campaign.channel} />
+                    <TypePill type={campaign.content_type} />
+                    {avatarName && <span className="text-xs text-zinc-500">for {avatarName}</span>}
+                  </div>
+                  <h3 className="mt-3 font-semibold">{campaign.angle}</h3>
+                  <p className="mt-2 text-sm italic text-zinc-300">&ldquo;{campaign.hook}&rdquo;</p>
+
+                  {/* Content generation section */}
+                  <div className="mt-4 flex items-center justify-between border-t border-zinc-800 pt-4">
+                    <div>
+                      {pieces && pieces.length > 0 && (
+                        <button
+                          onClick={() => toggleExpanded(campaign.id)}
+                          className="text-xs text-zinc-400 transition-colors hover:text-zinc-200"
+                        >
+                          {isExpanded
+                            ? "Hide content"
+                            : `Show ${pieces.length} piece${pieces.length === 1 ? "" : "s"}`}
+                        </button>
+                      )}
+                    </div>
+                    <button
+                      onClick={() => handleGenerateContent(campaign.id)}
+                      disabled={isGenerating}
+                      className="rounded-lg border border-indigo-500/30 bg-indigo-500/10 px-3 py-1.5 text-xs font-medium text-indigo-300 transition-colors hover:bg-indigo-500/20 disabled:opacity-50"
+                    >
+                      {isGenerating ? (
+                        <span className="flex items-center gap-1.5">
+                          <span className="h-3 w-3 animate-spin rounded-full border border-indigo-300/30 border-t-indigo-300" />
+                          Generating...
+                        </span>
+                      ) : pieces && pieces.length > 0 ? (
+                        "Regenerate Content"
+                      ) : (
+                        "Generate Content"
+                      )}
+                    </button>
+                  </div>
+
+                  {/* Inline content preview */}
+                  {isExpanded &&
+                    pieces?.map((piece) => (
+                      <div key={piece.id} className="mt-3 rounded-lg bg-zinc-800/50 p-4">
+                        <div className="flex items-start justify-between gap-2">
+                          <div className="min-w-0 flex-1">
+                            <p className="text-xs font-medium text-zinc-400">{piece.title}</p>
+                            <p className="mt-2 whitespace-pre-wrap text-sm leading-relaxed text-zinc-300">
+                              {piece.body}
+                            </p>
+                          </div>
+                          <CopyButton text={piece.body} />
+                        </div>
+                      </div>
+                    ))}
                 </div>
-                <h3 className="mt-3 font-semibold">{campaign.angle}</h3>
-                <p className="mt-2 text-sm italic text-zinc-300">
-                  &ldquo;{campaign.hook}&rdquo;
-                </p>
-                <p className="mt-2 text-sm text-zinc-500">
-                  {campaign.why_it_works}
-                </p>
-              </div>
-            ))}
+              );
+            })}
           </div>
         </section>
 
