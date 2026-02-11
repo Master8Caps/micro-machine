@@ -115,19 +115,22 @@ Micro Machine is an internal-first SaaS product that turns a simple product brie
 - [x] Copy-to-clipboard with "Copied!" feedback
 
 ### App — Campaigns Page
-- [x] Social / Ads tab bar (Ads tab shown only when ad campaigns exist)
+- [x] Social / Email / Ads tab bar (Email and Ads tabs shown only when those campaigns exist)
+- [x] Email campaigns separated from Social (channel="Email" gets own tab)
 - [x] Product and channel/platform filter dropdowns
-- [x] Campaign count display
+- [x] Campaign count right-aligned next to tabs (not in filter row)
 - [x] Slide-over panel on click (instead of navigating to brain page)
 - [x] Panel shows: campaign details, generate/regenerate button (admin), content pieces (compact, click-to-expand)
 
 ### App — Content Page
-- [x] Category filter: All / Social / Ads / Website
+- [x] Category pill tabs: All / Social / Email / Ads / Website (with per-category counts)
+- [x] Email separated as its own category (email-sequence pieces, not under Website)
 - [x] Product filter dropdown
 - [x] Type filter dropdown (all content types including website kit types)
 - [x] Status filter dropdown (Draft/Ready/Published)
-- [x] "Show archived" checkbox (archived hidden by default)
-- [x] Content count display
+- [x] Archive icon toggle button (replaces checkbox, with active state styling)
+- [x] "Clear filters" button shown when any filter is active
+- [x] Filtered count right-aligned on tab row
 - [x] Product name prominent on each card
 - [x] Campaign angle as subtitle
 - [x] Expandable body preview (line-clamp-3)
@@ -141,12 +144,21 @@ Micro Machine is an internal-first SaaS product that turns a simple product brie
 - [x] Archive toggle button on each content piece (content page + campaign panel)
 - [x] "Show archived" filter on content page (hidden by default)
 
+### App — Product Delete (Admin Only)
+- [x] `deleteProduct()` server action with admin role check (server-side enforcement)
+- [x] ON DELETE CASCADE handles all child records (campaigns, avatars, generations, content_pieces, links, clicks)
+- [x] Delete button on brain page header (red, admin-only) with confirmation dialog
+- [x] Delete button on dashboard product cards (trash icon, admin-only) with confirmation dialog
+- [x] `ProductDeleteButton` client component (handles click interception inside Link wrapper)
+- [x] Confirmation modal shows product name, warns about permanent deletion
+
 ### App — Role-Based Access
 - [x] `getUserWithRole()` in server/auth.ts
 - [x] UserContext React context providing `{ email, role }` to all client components
 - [x] Dashboard layout wraps children in UserProvider
 - [x] Generate/regenerate buttons: admin only (brain page, campaign panel)
 - [x] Archive/reactivate, regenerate brain: admin only
+- [x] Delete product: admin only (brain page + dashboard)
 - [x] Status dropdown (StatusSelect): available to all users
 - [x] Non-admin users see "Generated" badge instead of regenerate buttons
 
@@ -159,6 +171,7 @@ Micro Machine is an internal-first SaaS product that turns a simple product brie
 - [x] `ArchiveToggle` — archive/unarchive icon button on content pieces
 - [x] `CopyButton` — clipboard icon with green checkmark feedback
 - [x] `GlowCard` — cursor-following radial gradient glow (marketing site)
+- [x] `ProductDeleteButton` — admin-only trash icon with confirmation modal (dashboard product cards)
 
 ---
 
@@ -174,9 +187,9 @@ Micro Machine is an internal-first SaaS product that turns a simple product brie
    - Reactivating the product sets `archived=false` on campaigns and content
 3. **Content page archiving** — Verify:
    - StatusSelect only shows Draft/Ready/Published (no Archived option)
-   - Archive toggle button appears on each content piece
+   - Archive icon toggle button appears on each content piece (replaces old checkbox)
    - Clicking archive toggle shows the "Archived" badge next to the status
-   - Archived pieces hidden by default, visible when "Show archived" checked
+   - Archived pieces hidden by default, visible when archive icon is toggled on
    - A published piece can be archived and still shows "Published, Archived"
 4. **Campaign panel archiving** — Open a campaign slide-over, verify:
    - Archive toggle + badge work on content pieces within the panel
@@ -186,8 +199,27 @@ Micro Machine is an internal-first SaaS product that turns a simple product brie
    - Website kit section populates (landing page, emails, meta desc, taglines)
    - All three sections load immediately (not empty on first generation)
 6. **Content generation** — Click "Generate Content" on a social campaign, verify 2-3 pieces appear
-7. **Campaigns page** — Verify Social/Ads tabs work, filters scope correctly, slide-over panel opens
-8. **Content page** — Verify category filter (Social/Ads/Website), product filter, type filter all work
+7. **Campaigns page** — Verify:
+   - Social / Email / Ads tabs display correctly (Email tab only when email campaigns exist)
+   - Email campaigns appear under Email tab, not Social
+   - Campaign count appears right-aligned next to tabs
+   - Filters scope correctly, slide-over panel opens
+8. **Content page** — Verify:
+   - Category pill tabs (All/Social/Email/Ads/Website) show with correct counts
+   - Email sequences appear under Email category, not Website
+   - Product, type, status dropdowns filter correctly
+   - "Clear filters" button appears when any filter is active
+   - Filtered piece count displays right-aligned on tab row
+9. **Admin: Delete product** — As admin on brain page:
+   - Red "Delete" button visible in header (not visible for non-admin)
+   - Clicking shows confirmation dialog with product name
+   - Cancel dismisses dialog, nothing deleted
+   - Confirm deletes product + all campaigns, content, avatars, generations
+   - Redirects to dashboard after deletion
+10. **Admin: Delete from dashboard** — As admin on dashboard:
+    - Trash icon visible on each product card (not visible for non-admin)
+    - Clicking shows confirmation dialog
+    - Confirm deletes product and refreshes the list
 
 ---
 
@@ -255,7 +287,12 @@ Micro Machine is an internal-first SaaS product that turns a simple product brie
 | 2026-02-10 | Email stays as social channel | Newsletters/outreach are ongoing; email sequences are website kit deliverables |
 | 2026-02-10 | Ad strategy: retargeting + cold traffic | Reuse best social angles for retargeting, dedicated angles for cold traffic |
 | 2026-02-10 | Website kit: full kit | Landing page, 3 welcome emails, meta description, 3 taglines |
-| 2026-02-10 | Archive only, no delete | CASCADE deletes would destroy all generated content permanently |
+| 2026-02-10 | Archive only, no delete (original) | CASCADE deletes would destroy all generated content permanently |
+| 2026-02-11 | Admin-only delete added | Admins can permanently delete products; cascade handles all child records; confirmation dialog required |
 | 2026-02-10 | Status management available to all users | Changing content status (draft/ready/published) is not admin-only |
 | 2026-02-10 | Archived is a boolean flag, not a status | Preserves workflow status when archiving — "Published, Archived" instead of losing the original status |
 | 2026-02-10 | Product archive cascades via archived flag | Sets archived=true on campaigns + content without touching workflow status |
+| 2026-02-11 | Email as its own category | Email campaigns and email sequences separated from Social and Website respectively |
+| 2026-02-11 | Pill tabs for category filters | Segmented control (All/Social/Email/Ads/Website) replaces dropdown for cleaner UI |
+| 2026-02-11 | Archive icon toggle replaces checkbox | Compact icon button with active state, declutters filter bar |
+| 2026-02-11 | Count badge right-aligned, not in filter row | Filtered count visually separated from filter controls to avoid ambiguity |
