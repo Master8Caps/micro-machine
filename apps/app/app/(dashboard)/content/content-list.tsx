@@ -74,7 +74,7 @@ export function ContentList({
 
   // Compute category counts (respecting archived visibility but not other filters)
   const categoryCounts = useMemo(() => {
-    const visible = pieces.filter((p) => showArchived || !p.archived);
+    const visible = pieces.filter((p) => p.archived === showArchived);
     const counts: Record<string, number> = { "": visible.length };
     for (const p of visible) {
       const cat = getCategory(p);
@@ -84,7 +84,7 @@ export function ContentList({
   }, [pieces, showArchived]);
 
   const filtered = pieces.filter((p) => {
-    if (!showArchived && p.archived) return false;
+    if (p.archived !== showArchived) return false;
     if (productFilter && p.product_id !== productFilter) return false;
     if (typeFilter && p.type !== typeFilter) return false;
     if (statusFilter && p.status !== statusFilter) return false;
@@ -189,7 +189,7 @@ export function ContentList({
         </select>
         <button
           onClick={() => setShowArchived(!showArchived)}
-          title={showArchived ? "Hide archived" : "Show archived"}
+          title={showArchived ? "View active content" : "View archived"}
           className={`rounded-lg border p-2 transition-colors ${
             showArchived
               ? "border-zinc-600 bg-zinc-800 text-zinc-300"
