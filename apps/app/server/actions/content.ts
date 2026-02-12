@@ -12,6 +12,7 @@ function mapContentType(contentType: string, channel: string): string {
   const ch = channel.toLowerCase();
 
   if (key === "text-post") {
+    if (ch.includes("email")) return "email";
     if (ch.includes("linkedin")) return "linkedin-post";
     if (ch.includes("twitter") || ch.includes("x")) return "twitter-post";
     return "linkedin-post";
