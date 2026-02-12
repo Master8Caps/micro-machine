@@ -8,6 +8,7 @@ const navItems = [
   { label: "Campaigns", href: "/campaigns" },
   { label: "Content", href: "/content" },
   { label: "Analytics", href: "/analytics" },
+  { label: "Archive", href: "/archive" },
 ];
 
 export function SidebarNav() {

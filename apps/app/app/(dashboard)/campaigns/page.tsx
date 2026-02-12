@@ -9,13 +9,15 @@ export default async function CampaignsPage() {
     .select(
       "id, product_id, angle, channel, hook, content_type, status, category, created_at, products(name), avatars(name)",
     )
+    .eq("archived", false)
     .order("created_at", { ascending: false });
 
   // Count content pieces per campaign
   const { data: contentPieces } = await supabase
     .from("content_pieces")
     .select("campaign_id")
-    .not("campaign_id", "is", null);
+    .not("campaign_id", "is", null)
+    .eq("archived", false);
 
   const countMap: Record<string, number> = {};
   contentPieces?.forEach((row) => {

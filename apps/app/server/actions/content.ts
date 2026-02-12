@@ -1,5 +1,6 @@
 "use server";
 
+import { revalidatePath } from "next/cache";
 import Anthropic from "@anthropic-ai/sdk";
 import { createClient } from "@/lib/supabase/server";
 
@@ -183,6 +184,12 @@ export async function generateContentForCampaign(input: GenerateContentInput) {
       pieces: { title: string; body: string; cta_text?: string; notes?: string }[];
     } = JSON.parse(jsonMatch[0]);
 
+    // Delete existing content pieces for this campaign before inserting new ones
+    await supabase
+      .from("content_pieces")
+      .delete()
+      .eq("campaign_id", input.campaignId);
+
     // Insert content pieces
     const inserts = output.pieces.map((piece) => ({
       product_id: input.productId,
@@ -206,6 +213,8 @@ export async function generateContentForCampaign(input: GenerateContentInput) {
       .select("id, type, title, body, metadata, status, archived, created_at");
 
     if (insertError) return { error: insertError.message };
+
+    revalidatePath("/content");
 
     return { pieces: savedPieces ?? [] };
   } catch (err) {
@@ -286,6 +295,9 @@ export async function updateContentPieceStatus(
     .eq("id", pieceId);
 
   if (error) return { error: error.message };
+
+  revalidatePath("/content");
+
   return { success: true };
 }
 
@@ -308,5 +320,9 @@ export async function toggleContentPieceArchived(
     .eq("id", pieceId);
 
   if (error) return { error: error.message };
+
+  revalidatePath("/content");
+  revalidatePath("/archive");
+
   return { success: true };
 }

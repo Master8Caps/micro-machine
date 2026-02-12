@@ -1,5 +1,6 @@
 "use server";
 
+import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 
 interface CreateProductInput {
@@ -85,6 +86,11 @@ export async function updateProductStatus(productId: string, status: "active" | 
     .update({ archived })
     .eq("product_id", productId);
 
+  revalidatePath("/");
+  revalidatePath("/campaigns");
+  revalidatePath("/content");
+  revalidatePath("/archive");
+
   return { success: true };
 }
 
@@ -120,6 +126,11 @@ export async function deleteProduct(productId: string) {
   if (error) {
     return { error: error.message };
   }
+
+  revalidatePath("/");
+  revalidatePath("/campaigns");
+  revalidatePath("/content");
+  revalidatePath("/archive");
 
   return { success: true };
 }

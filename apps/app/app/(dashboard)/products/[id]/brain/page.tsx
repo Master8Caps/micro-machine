@@ -235,8 +235,15 @@ export default function BrainPage() {
   );
 
   const handleBulkGenerate = useCallback(async (campaigns: DbCampaign[], setLoading: (v: boolean) => void) => {
+    // Only generate for campaigns that don't already have content
+    const remaining = campaigns.filter(
+      (c) => !contentByCampaign[c.id] || contentByCampaign[c.id].length === 0,
+    );
+
+    if (remaining.length === 0) return;
+
     setLoading(true);
-    const ids = campaigns.map((c) => c.id);
+    const ids = remaining.map((c) => c.id);
     setGeneratingCampaigns(new Set(ids));
 
     const result = await generateContentBulk({ productId, campaignIds: ids });
@@ -322,6 +329,16 @@ export default function BrainPage() {
 
   const sortedSocial = [...socialCampaigns].sort((a, b) => a.channel.localeCompare(b.channel));
   const sortedAds = [...adCampaigns].sort((a, b) => a.channel.localeCompare(b.channel));
+
+  const socialRemaining = sortedSocial.filter(
+    (c) => !contentByCampaign[c.id] || contentByCampaign[c.id].length === 0,
+  ).length;
+  const allSocialGenerated = sortedSocial.length > 0 && socialRemaining === 0;
+
+  const adsRemaining = sortedAds.filter(
+    (c) => !contentByCampaign[c.id] || contentByCampaign[c.id].length === 0,
+  ).length;
+  const allAdsGenerated = sortedAds.length > 0 && adsRemaining === 0;
 
   return (
     <div className="py-4">
@@ -426,10 +443,16 @@ export default function BrainPage() {
             {isAdmin && sortedSocial.length > 0 && (
               <button
                 onClick={() => handleBulkGenerate(sortedSocial, setBulkGenerating)}
-                disabled={bulkGenerating}
+                disabled={bulkGenerating || allSocialGenerated}
                 className="rounded-lg bg-indigo-600 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-indigo-500 disabled:opacity-50"
               >
-                {bulkGenerating ? "Generating..." : "Generate All Social Content"}
+                {bulkGenerating
+                  ? "Generating..."
+                  : allSocialGenerated
+                    ? "All Social Content Generated"
+                    : socialRemaining < sortedSocial.length
+                      ? `Generate Remaining Social Content (${socialRemaining})`
+                      : "Generate All Social Content"}
               </button>
             )}
           </div>
@@ -465,10 +488,16 @@ export default function BrainPage() {
               {isAdmin && sortedAds.length > 0 && (
                 <button
                   onClick={() => handleBulkGenerate(sortedAds, setBulkAdGenerating)}
-                  disabled={bulkAdGenerating}
+                  disabled={bulkAdGenerating || allAdsGenerated}
                   className="rounded-lg bg-indigo-600 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-indigo-500 disabled:opacity-50"
                 >
-                  {bulkAdGenerating ? "Generating..." : "Generate All Ad Creatives"}
+                  {bulkAdGenerating
+                    ? "Generating..."
+                    : allAdsGenerated
+                      ? "All Ad Creatives Generated"
+                      : adsRemaining < sortedAds.length
+                        ? `Generate Remaining Ad Creatives (${adsRemaining})`
+                        : "Generate All Ad Creatives"}
                 </button>
               )}
             </div>

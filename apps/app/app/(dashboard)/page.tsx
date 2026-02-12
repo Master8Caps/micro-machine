@@ -9,15 +9,18 @@ export default async function DashboardPage() {
   const { data: products } = await supabase
     .from("products")
     .select("id, name, description, status, created_at")
+    .neq("status", "archived")
     .order("created_at", { ascending: false });
 
   const { count: campaignCount } = await supabase
     .from("campaigns")
-    .select("*", { count: "exact", head: true });
+    .select("*", { count: "exact", head: true })
+    .eq("archived", false);
 
   const { count: contentCount } = await supabase
     .from("content_pieces")
-    .select("*", { count: "exact", head: true });
+    .select("*", { count: "exact", head: true })
+    .eq("archived", false);
 
   return (
     <>
