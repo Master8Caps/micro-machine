@@ -6,10 +6,16 @@ import { ProductDeleteButton } from "@/components/product-delete-button";
 export default async function DashboardPage() {
   const supabase = await createClient();
 
-  const { data: products } = await supabase
+  const { data: activeProducts } = await supabase
     .from("products")
     .select("id, name, description, status, created_at")
     .neq("status", "archived")
+    .order("created_at", { ascending: false });
+
+  const { data: archivedProducts } = await supabase
+    .from("products")
+    .select("id, name, description, status, created_at")
+    .eq("status", "archived")
     .order("created_at", { ascending: false });
 
   const { count: campaignCount } = await supabase
@@ -42,7 +48,7 @@ export default async function DashboardPage() {
       <div className="grid gap-6 md:grid-cols-3">
         <div className="rounded-xl border border-zinc-800 bg-zinc-900/50 p-6">
           <p className="text-sm text-zinc-500">Products</p>
-          <p className="mt-2 text-3xl font-bold">{products?.length ?? 0}</p>
+          <p className="mt-2 text-3xl font-bold">{activeProducts?.length ?? 0}</p>
         </div>
         <div className="rounded-xl border border-zinc-800 bg-zinc-900/50 p-6">
           <p className="text-sm text-zinc-500">Campaign Angles</p>
@@ -54,11 +60,12 @@ export default async function DashboardPage() {
         </div>
       </div>
 
-      {products && products.length > 0 ? (
+      {/* Active Products */}
+      {activeProducts && activeProducts.length > 0 ? (
         <div className="mt-8">
-          <h2 className="text-lg font-semibold">Your Products</h2>
+          <h2 className="text-lg font-semibold">Active Products</h2>
           <div className="mt-4 space-y-3">
-            {products.map((product) => (
+            {activeProducts.map((product) => (
               <Link
                 key={product.id}
                 href={`/products/${product.id}/brain`}
@@ -93,6 +100,35 @@ export default async function DashboardPage() {
           >
             Create Product
           </Link>
+        </div>
+      )}
+
+      {/* Archived Products */}
+      {archivedProducts && archivedProducts.length > 0 && (
+        <div className="mt-8">
+          <h2 className="text-lg font-semibold text-zinc-500">Archived Products</h2>
+          <div className="mt-4 space-y-3">
+            {archivedProducts.map((product) => (
+              <Link
+                key={product.id}
+                href={`/products/${product.id}/brain`}
+                className="block rounded-xl border border-zinc-800/60 bg-zinc-900/30 p-6 transition-colors hover:border-zinc-700 hover:bg-zinc-900"
+              >
+                <div className="flex items-center justify-between">
+                  <div>
+                    <h3 className="font-semibold text-zinc-400">{product.name}</h3>
+                    <p className="mt-1 text-sm text-zinc-500">
+                      {product.description}
+                    </p>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <StatusPill status={product.status} />
+                    <ProductDeleteButton productId={product.id} productName={product.name} />
+                  </div>
+                </div>
+              </Link>
+            ))}
+          </div>
         </div>
       )}
     </>

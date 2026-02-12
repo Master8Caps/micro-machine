@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { updateProductStatus } from "@/server/actions/products";
 import { ChannelPill, TypePill } from "@/components/pills";
 import { useUser } from "@/components/user-context";
+import { CampaignPanel } from "@/app/(dashboard)/campaigns/campaign-panel";
 
 interface ArchivedProduct {
   id: string;
@@ -24,6 +25,7 @@ interface ArchivedCampaign {
   status: string;
   category: string;
   created_at: string;
+  products: { name: string } | null;
   avatars: { name: string } | null;
 }
 
@@ -45,6 +47,7 @@ export function ArchiveList({
   const router = useRouter();
   const [expandedProduct, setExpandedProduct] = useState<string | null>(null);
   const [reactivating, setReactivating] = useState<string | null>(null);
+  const [selectedCampaign, setSelectedCampaign] = useState<ArchivedCampaign | null>(null);
 
   async function handleReactivate(productId: string) {
     setReactivating(productId);
@@ -138,9 +141,10 @@ export function ArchiveList({
                       Archived Campaigns
                     </h4>
                     {productCampaigns.map((campaign) => (
-                      <div
+                      <button
                         key={campaign.id}
-                        className="rounded-lg border border-zinc-800 bg-zinc-800/30 p-4"
+                        onClick={() => setSelectedCampaign(campaign)}
+                        className="w-full rounded-lg border border-zinc-800 bg-zinc-800/30 p-4 text-left transition-colors hover:border-zinc-700 hover:bg-zinc-800/50"
                       >
                         <div className="flex flex-wrap items-center gap-2">
                           <ChannelPill channel={campaign.channel} />
@@ -162,7 +166,7 @@ export function ArchiveList({
                         <p className="mt-1 text-xs italic text-zinc-400">
                           &ldquo;{campaign.hook}&rdquo;
                         </p>
-                      </div>
+                      </button>
                     ))}
                   </div>
                 ) : (
@@ -175,6 +179,13 @@ export function ArchiveList({
           </div>
         );
       })}
+
+      {selectedCampaign && (
+        <CampaignPanel
+          campaign={selectedCampaign}
+          onClose={() => setSelectedCampaign(null)}
+        />
+      )}
     </div>
   );
 }

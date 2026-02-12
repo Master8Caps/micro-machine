@@ -13,7 +13,7 @@ export default async function ArchivePage() {
   const { data: campaigns } = await supabase
     .from("campaigns")
     .select(
-      "id, product_id, angle, channel, hook, content_type, status, category, created_at, avatars(name)",
+      "id, product_id, angle, channel, hook, content_type, status, category, created_at, products(name), avatars(name)",
     )
     .eq("archived", true)
     .order("created_at", { ascending: false });
@@ -58,6 +58,7 @@ export default async function ArchivePage() {
               status: string;
               category: string;
               created_at: string;
+              products: { name: string } | null;
               avatars: { name: string } | null;
             }[])
           }
