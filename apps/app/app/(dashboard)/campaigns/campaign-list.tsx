@@ -22,9 +22,10 @@ interface CampaignRow {
 interface CampaignListProps {
   campaigns: CampaignRow[];
   contentCounts: Record<string, number>;
+  clickCounts: Record<string, number>;
 }
 
-export function CampaignList({ campaigns, contentCounts }: CampaignListProps) {
+export function CampaignList({ campaigns, contentCounts, clickCounts }: CampaignListProps) {
   const [activeTab, setActiveTab] = useState<"social" | "email" | "ad">("social");
   const [productFilter, setProductFilter] = useState("");
   const [channelFilter, setChannelFilter] = useState("");
@@ -78,7 +79,7 @@ export function CampaignList({ campaigns, contentCounts }: CampaignListProps) {
             >
               Social
               <span className={`ml-1.5 ${activeTab === "social" ? "text-zinc-500" : "text-zinc-600"}`}>
-                {socialCampaigns.length}
+                {activeTab === "social" ? filtered.length : socialCampaigns.length}
               </span>
             </button>
             {hasEmail && (
@@ -92,7 +93,7 @@ export function CampaignList({ campaigns, contentCounts }: CampaignListProps) {
               >
                 Email
                 <span className={`ml-1.5 ${activeTab === "email" ? "text-zinc-500" : "text-zinc-600"}`}>
-                  {emailCampaigns.length}
+                  {activeTab === "email" ? filtered.length : emailCampaigns.length}
                 </span>
               </button>
             )}
@@ -107,7 +108,7 @@ export function CampaignList({ campaigns, contentCounts }: CampaignListProps) {
               >
                 Ads
                 <span className={`ml-1.5 ${activeTab === "ad" ? "text-zinc-500" : "text-zinc-600"}`}>
-                  {adCampaigns.length}
+                  {activeTab === "ad" ? filtered.length : adCampaigns.length}
                 </span>
               </button>
             )}
@@ -194,6 +195,14 @@ export function CampaignList({ campaigns, contentCounts }: CampaignListProps) {
                       <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71" />
                     </svg>
                     Tracked
+                  </span>
+                )}
+                {(clickCounts[campaign.id] ?? 0) > 0 && (
+                  <span className="flex items-center gap-1 text-xs text-zinc-500">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M15 15l-2 5L9 9l11 4-5 2z" />
+                    </svg>
+                    {clickCounts[campaign.id]} click{clickCounts[campaign.id] === 1 ? "" : "s"}
                   </span>
                 )}
               </div>

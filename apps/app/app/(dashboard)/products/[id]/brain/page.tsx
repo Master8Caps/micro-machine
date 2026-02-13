@@ -287,7 +287,7 @@ export default function BrainPage() {
           <p className="mt-2 text-zinc-400">
             Analyzing your product, identifying avatars, and creating campaign angles...
           </p>
-          <p className="mt-1 text-sm text-zinc-500">This usually takes 15-30 seconds.</p>
+          <p className="mt-1 text-sm text-zinc-500">This usually takes about a minute.</p>
         </div>
       </div>
     );

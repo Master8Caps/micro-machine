@@ -237,7 +237,9 @@ export async function generateContentForCampaign(input: GenerateContentInput) {
 
     revalidatePath("/content");
 
-    return { pieces: savedPieces ?? [] };
+    // Re-fetch pieces with tracked links included
+    const freshData = await loadContentForCampaign(input.campaignId);
+    return { pieces: freshData.pieces ?? [] };
   } catch (err) {
     return {
       error: err instanceof Error ? err.message : "Content generation failed",

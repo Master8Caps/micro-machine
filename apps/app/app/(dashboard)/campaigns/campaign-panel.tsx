@@ -182,7 +182,7 @@ export function CampaignPanel({ campaign, onClose }: CampaignPanelProps) {
               ) : (
                 <div className="flex items-center gap-2">
                   {destUrl ? (
-                    <span className="truncate text-sm text-blue-400">{destUrl}</span>
+                    <span className="truncate rounded-md bg-zinc-800/50 px-3 py-1.5 font-mono text-xs text-blue-400">{destUrl}</span>
                   ) : (
                     <span className="text-sm text-zinc-600">Not set (uses product URL)</span>
                   )}

@@ -78,16 +78,22 @@ export function ContentList({
   const [showArchived, setShowArchived] = useState(false);
   const [expandedId, setExpandedId] = useState<string | null>(null);
 
-  // Compute category counts (respecting archived visibility but not other filters)
+  // Compute category counts (respecting all filters except category)
   const categoryCounts = useMemo(() => {
-    const visible = pieces.filter((p) => p.archived === showArchived);
+    const visible = pieces.filter((p) => {
+      if (p.archived !== showArchived) return false;
+      if (productFilter && p.product_id !== productFilter) return false;
+      if (typeFilter && p.type !== typeFilter) return false;
+      if (statusFilter && p.status !== statusFilter) return false;
+      return true;
+    });
     const counts: Record<string, number> = { "": visible.length };
     for (const p of visible) {
       const cat = getCategory(p);
       counts[cat] = (counts[cat] ?? 0) + 1;
     }
     return counts;
-  }, [pieces, showArchived]);
+  }, [pieces, showArchived, productFilter, typeFilter, statusFilter]);
 
   const filtered = pieces.filter((p) => {
     if (p.archived !== showArchived) return false;

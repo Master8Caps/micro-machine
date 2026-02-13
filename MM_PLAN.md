@@ -208,48 +208,26 @@ Micro Machine is an internal-first SaaS product that turns a simple product brie
 
 ---
 
-## Things to Test Now
+## Link Tracking Test Results (2026-02-13)
 
-> **Pre-requisite:** Run migration `00007_campaign_destination_url.sql` in Supabase SQL editor before testing.
+> Migration `00007_campaign_destination_url.sql` — Applied.
 
-1. **Campaign destination URL** — Open a campaign in the slide-over panel. Verify:
-   - A "Destination URL" section appears below the hook in the panel header
-   - Shows "Not set (uses product URL)" when empty, with a pencil edit icon
-   - Clicking edit shows an input field with Save/Cancel buttons
-   - Entering a URL and saving persists it (close and reopen panel to confirm)
-   - Clearing the URL and saving resets to "Not set" state
-   - Campaigns page cards show a small blue "Tracked" badge when destination URL is set
-2. **Tracked link auto-generation** — Set a destination URL on a campaign, then generate content. Verify:
-   - After generation completes, each content piece has a tracked link shown (blue monospace `/r/xxxxx` format)
-   - Links display a click count (should be 0 for new links)
-   - Copy button next to the tracked link copies the full URL to clipboard
-   - The tracked link appears both in the campaign panel (expanded piece) and on the Content page
-3. **Tracked link fallback** — On a product that has a `website_url` set but a campaign with NO destination URL:
-   - Generate content for that campaign
-   - Tracked links should still be created using the product's website URL as the destination
-4. **No destination URL** — On a campaign with no destination URL and a product with no website URL:
-   - Generate content for that campaign
-   - No tracked links should appear (no errors, content generation works normally)
-5. **Redirect endpoint** — Copy a tracked link and open it in a new browser tab. Verify:
-   - You are redirected to the destination URL
-   - The destination URL has UTM parameters appended (utm_source, utm_medium, utm_campaign, utm_content)
-   - After clicking, go back to the content piece — click count should increment
-6. **Analytics page** — Navigate to Analytics in the sidebar. Verify:
-   - Summary cards show: Total Clicks, Last 7 Days, Last 30 Days, Active Links
-   - If no links exist, shows an empty state message
-   - If links exist with clicks, the 30-day bar chart renders
-   - Top Performing Links table shows links sorted by click count with copy buttons
-   - Clicks by Channel section shows a breakdown with progress bars
-   - Product filter dropdown filters all data to a specific product
-7. **Content page — tracked links** — On the Content page, verify:
-   - Content pieces with tracked links show the link row (blue link + click count + copy button)
-   - Content pieces without tracked links show no link row (no empty/broken state)
-   - Links data loads correctly across category filters (Social/Email/Ads/Website tabs)
-8. **Existing features still work** — Quick smoke test:
-   - Dashboard loads with Active/Archived sections
-   - Campaign panel generate/regenerate still works
-   - Content status changes and archive toggles still work
-   - Archive page still loads and works
+### Passed
+1. **Campaign destination URL** — Destination URL section appears in panel, edit/save/clear all work, "Tracked" badge shows on campaign cards. Contrast improved with background styling.
+2. **Tracked link auto-generation** — Links generate correctly. **Fixed:** tracked links now appear immediately in the campaign panel after generation (previously required closing/reopening the panel).
+7. **Content page — tracked links** — Link rows display correctly with click counts and copy buttons. Loads across all category filters.
+8. **Existing features** — Dashboard, generate/regenerate, status changes, archive toggles, archive page all working.
+
+### Fixed
+- Destination URL display contrast improved (background box + monospace styling)
+- Tracked links now included in generation response (re-fetch after link creation)
+- Campaign-level total clicks now shown on campaign cards
+
+### Still to Test
+3. **Tracked link fallback** — Product website_url used when campaign has no destination URL
+4. **No destination URL** — No tracked links when neither campaign nor product has a URL
+5. **Redirect endpoint** — Test with a real URL to confirm 302 redirect + UTM params. Click counts visible in analytics. Need to verify click count updates on content page after clicking.
+6. **Analytics page** — Full testing of summary cards, chart, top links table, channel breakdown, product filter
 
 ---
 
@@ -291,7 +269,7 @@ Micro Machine is an internal-first SaaS product that turns a simple product brie
 | 00004 | `00004_content_workstreams.sql` | Content workstreams — has_website, wants_ads, campaign categories, expanded content types | Applied |
 | 00005 | `00005_separate_archived_flag.sql` | Separate archived from status — archived boolean on campaigns + content_pieces | Applied |
 | 00006 | `00006_content_formats.sql` | Content format preferences + remove video-hook — content_formats column on products, migrate video-hook→video-script, update constraints | Applied |
-| 00007 | `00007_campaign_destination_url.sql` | Campaign destination URL — destination_url column on campaigns for tracked link generation | Pending |
+| 00007 | `00007_campaign_destination_url.sql` | Campaign destination URL — destination_url column on campaigns for tracked link generation | Applied |
 
 ---
 

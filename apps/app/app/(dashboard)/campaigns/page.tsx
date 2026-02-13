@@ -26,6 +26,19 @@ export default async function CampaignsPage() {
     }
   });
 
+  // Count total clicks per campaign
+  const { data: linkRows } = await supabase
+    .from("links")
+    .select("campaign_id, click_count")
+    .not("campaign_id", "is", null);
+
+  const clickMap: Record<string, number> = {};
+  linkRows?.forEach((row) => {
+    if (row.campaign_id) {
+      clickMap[row.campaign_id] = (clickMap[row.campaign_id] ?? 0) + (row.click_count ?? 0);
+    }
+  });
+
   return (
     <>
       <div className="mb-8">
@@ -39,6 +52,7 @@ export default async function CampaignsPage() {
         <CampaignList
           campaigns={campaigns as any}
           contentCounts={countMap}
+          clickCounts={clickMap}
         />
       ) : (
         <div className="rounded-xl border border-dashed border-zinc-700 p-12 text-center">
