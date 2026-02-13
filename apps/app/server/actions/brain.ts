@@ -333,19 +333,29 @@ INSTRUCTIONS:
 2. For each avatar, generate 2-3 SOCIAL campaign angles with specific hooks. Each campaign targets one social channel and one avatar.
 3. Hooks should be ready to use as the opening line of a social post — specific, provocative, and curiosity-driven.
 4. Social content types must be one of: ${contentTypesList}
-5. ${varietyInstruction}`;
+5. ${varietyInstruction}
+6. For Instagram campaigns, ALWAYS use image-prompt or video-script content types (Instagram is visual-first — no text-only posts).`;
 
   if (product.wants_ads) {
     prompt += `
-6. Generate 2-3 AD CAMPAIGNS for paid advertising. Mix of:
+7. Generate 2-3 AD CAMPAIGNS for paid advertising. Use proven direct-response frameworks:
+   - PAS (Problem-Agitate-Solution): Lead with the pain, twist the knife, present the fix
+   - AIDA (Attention-Interest-Desire-Action): Hook, build interest, create want, drive action
+   - BAB (Before-After-Bridge): Show the struggle, paint the outcome, the product is the bridge
+   Mix of strategies:
    - Retargeting ads: take the strongest social campaign angle and adapt it for paid ads
    - Cold traffic ads: dedicated conversion-focused angles for people who haven't heard of the product
+   Platform-specific guidance:
+   - Meta (Facebook/Instagram): visual-first, thumb-stopping creative, emotional hooks
+   - Google: search-intent focused, keyword-relevant headlines, specific benefits
+   - TikTok: native/authentic feel, not polished — raw and relatable hooks
+   - LinkedIn Ads: professional tone, ROI-driven, data-backed claims
    Each ad campaign needs: angle, platform (from the ad platforms listed), ad_format (single-image, carousel, or video), hook, strategy (retargeting or cold-traffic), and why_it_works.`;
   }
 
   if (product.has_website) {
     prompt += `
-${product.wants_ads ? "7" : "6"}. Generate a WEBSITE KIT with:
+${product.wants_ads ? "8" : "7"}. Generate a WEBSITE KIT with:
    - Landing page copy: headline, subheadline, 3 benefit blocks (heading + description), social proof section suggestion, CTA button text
    - 3 welcome emails: subject line + body for a drip sequence (welcome, value, nudge-to-action)
    - Meta description (under 160 chars)

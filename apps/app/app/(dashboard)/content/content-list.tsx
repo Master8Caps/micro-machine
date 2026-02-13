@@ -31,6 +31,7 @@ const typeOptions = [
   { value: "", label: "All types" },
   { value: "linkedin-post", label: "LinkedIn Post" },
   { value: "twitter-post", label: "Tweet" },
+  { value: "facebook-post", label: "Facebook Post" },
   { value: "twitter-thread", label: "Thread" },
   { value: "video-script", label: "Video Script" },
   { value: "image-prompt", label: "Image Post" },

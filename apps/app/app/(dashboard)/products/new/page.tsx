@@ -4,14 +4,19 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { createProduct } from "@/server/actions/products";
 
-const channelOptions = [
-  "LinkedIn",
-  "X / Twitter",
-  "Reddit",
-  "Product Hunt",
-  "Indie Hackers",
-  "Email",
-  "Blog / SEO",
+const channelGroups = [
+  {
+    label: "Social Media",
+    channels: ["LinkedIn", "X / Twitter", "Facebook", "Instagram", "TikTok", "YouTube", "Pinterest"],
+  },
+  {
+    label: "Communities",
+    channels: ["Reddit", "Product Hunt", "Indie Hackers"],
+  },
+  {
+    label: "Content & Outreach",
+    channels: ["Email", "Blog / SEO"],
+  },
 ];
 
 const adPlatformOptions = ["Meta", "Google", "TikTok", "LinkedIn Ads"];
@@ -214,19 +219,28 @@ export default function NewProductPage() {
               Pick the channels you want to post on. Select at least one.
             </p>
 
-            <div className="mt-8 grid grid-cols-2 gap-3">
-              {channelOptions.map((channel) => (
-                <button
-                  key={channel}
-                  onClick={() => toggleChannel(channel)}
-                  className={`rounded-lg border px-4 py-3 text-left text-sm font-medium transition-colors ${
-                    channels.includes(channel)
-                      ? "border-white bg-white/10 text-zinc-100"
-                      : "border-zinc-700 text-zinc-400 hover:border-zinc-500 hover:text-zinc-300"
-                  }`}
-                >
-                  {channel}
-                </button>
+            <div className="mt-8 space-y-5">
+              {channelGroups.map((group) => (
+                <div key={group.label}>
+                  <p className="mb-2 text-xs font-medium uppercase tracking-wider text-zinc-500">
+                    {group.label}
+                  </p>
+                  <div className="grid grid-cols-3 gap-2">
+                    {group.channels.map((channel) => (
+                      <button
+                        key={channel}
+                        onClick={() => toggleChannel(channel)}
+                        className={`rounded-lg border px-3 py-2 text-left text-xs font-medium transition-colors ${
+                          channels.includes(channel)
+                            ? "border-white bg-white/10 text-zinc-100"
+                            : "border-zinc-700 text-zinc-400 hover:border-zinc-500 hover:text-zinc-300"
+                        }`}
+                      >
+                        {channel}
+                      </button>
+                    ))}
+                  </div>
+                </div>
               ))}
             </div>
 

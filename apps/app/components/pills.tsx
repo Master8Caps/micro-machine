@@ -16,6 +16,10 @@ const channelStyles: Record<string, string> = {
   meta: "border-blue-400/30 bg-blue-400/10 text-blue-300",
   google: "border-yellow-500/30 bg-yellow-500/10 text-yellow-400",
   tiktok: "border-pink-500/30 bg-pink-500/10 text-pink-400",
+  facebook: "border-blue-600/30 bg-blue-600/10 text-blue-400",
+  instagram: "border-fuchsia-500/30 bg-fuchsia-500/10 text-fuchsia-400",
+  youtube: "border-red-500/30 bg-red-500/10 text-red-400",
+  pinterest: "border-red-400/30 bg-red-400/10 text-red-300",
   "linkedin ads": "border-blue-500/30 bg-blue-500/10 text-blue-400",
 };
 
@@ -40,6 +44,7 @@ export function ChannelPill({ channel }: { channel: string }) {
 const typeLabels: Record<string, string> = {
   "linkedin-post": "Text Post",
   "twitter-post": "Text Post",
+  "facebook-post": "Facebook Post",
   "twitter-thread": "Thread",
   "video-script": "Video Script",
   "image-prompt": "Image Post",

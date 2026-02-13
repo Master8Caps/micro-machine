@@ -16,6 +16,8 @@ function mapContentType(contentType: string, channel: string): string {
     if (ch.includes("email")) return "email";
     if (ch.includes("linkedin")) return "linkedin-post";
     if (ch.includes("twitter") || ch.includes("x")) return "twitter-post";
+    if (ch.includes("facebook")) return "facebook-post";
+    if (ch.includes("instagram")) return "image-prompt";
     return "linkedin-post";
   }
   if (key === "thread") return "twitter-thread";
@@ -28,24 +30,38 @@ function mapContentType(contentType: string, channel: string): string {
 }
 
 // ── Format instructions per content type ─────────────
-function getFormatInstructions(type: string): string {
+function getFormatInstructions(type: string, channel?: string): string {
+  const ch = channel?.toLowerCase() ?? "";
+
   switch (type) {
     case "linkedin-post":
       return "Write LinkedIn posts. 150-300 words. Use short paragraphs and line breaks for readability. Open with a hook line that stops the scroll. End with a question or CTA. No hashtags unless essential.";
     case "twitter-post":
       return "Write tweets. Max 280 characters each. Punchy, opinionated, curiosity-driven. No hashtags unless essential.";
+    case "facebook-post":
+      return "Write Facebook posts. 100-250 words. Conversational and relatable tone. Open with a hook. Use short paragraphs. End with a question or CTA to drive engagement. Emoji usage is acceptable but not excessive.";
     case "twitter-thread":
       return "Write a Twitter/X thread of 4-7 tweets. First tweet is the hook. Use numbered format (1/, 2/, etc). Last tweet has the CTA. Each tweet under 280 characters.";
     case "video-script":
+      if (ch.includes("instagram"))
+        return "Write an Instagram Reels script (15-60 seconds, vertical 9:16). Hook in first 2 seconds — pattern interrupt that stops the scroll. Keep it native and authentic, not overly polished. Include [VISUAL] cues and [TEXT OVERLAY] notes. End with a clear CTA. Also include a short caption (1-2 sentences) with 3-5 relevant hashtags.";
       return "Write a 60-90 second video script. Include [VISUAL] cues. Hook in first 3 seconds. Problem, agitation, solution structure. End with clear CTA.";
     case "image-prompt":
+      if (ch.includes("instagram"))
+        return "Write an Instagram image post. Include: 1) A detailed image generation prompt for AI tools (Midjourney/DALL-E) with style, mood, composition, and any text overlay suggestions. 2) An Instagram caption (100-200 words) with a strong hook line, line breaks for readability, a clear CTA, and 3-5 relevant hashtags at the end. Conversational, authentic tone.";
       return "Write detailed image generation prompts for AI tools (Midjourney/DALL-E). Include style, mood, composition, and text overlay suggestions. Also include a caption for the social post.";
     case "landing-page-copy":
       return "Write landing page sections: headline, subheadline, 3 benefit blocks (heading + description), social proof placeholder, and CTA section.";
     case "email":
       return "Write marketing emails. Include subject line, preview text, body (3-5 short paragraphs), and CTA button text. Conversational tone, one clear goal per email.";
     case "ad-copy":
-      return "Write ad copy variations. Include: headline (max 30 chars), primary text (125 chars), description (30 chars). Provide variations with different angles.";
+      return `Write ad copy using proven direct-response frameworks (PAS, AIDA, BAB).
+For each variation include:
+- Primary text (40-125 characters): benefit-driven, creates urgency or curiosity
+- Headline (max 40 characters): clear value proposition, specific numbers when possible
+- Description (max 30 characters): reinforce the CTA
+- CTA suggestion (e.g. "Learn More", "Sign Up Free", "Get Started")
+Write 2-3 variations with different angles (pain-point, benefit, social-proof).`;
     default:
       return "Write content appropriate for the channel. Keep it specific and actionable.";
   }
@@ -72,7 +88,7 @@ function buildContentPrompt(
   },
   contentPieceType: string,
 ): string {
-  const formatInstructions = getFormatInstructions(contentPieceType);
+  const formatInstructions = getFormatInstructions(contentPieceType, campaign.channel);
 
   return `You are a world-class content marketer. Generate 2-3 high-quality content pieces for the campaign described below.
 
@@ -118,6 +134,109 @@ Respond with ONLY valid JSON:
 }`;
 }
 
+// ── Ad content prompt builder ────────────────────────
+function buildAdContentPrompt(
+  campaign: {
+    angle: string;
+    channel: string;
+    hook: string;
+    content_type: string;
+  },
+  avatar: {
+    name: string;
+    description: string;
+    pain_points: string[];
+    icp_details: { role?: string; context?: string; motivation?: string };
+  },
+  product: {
+    name: string;
+    description: string;
+    market: string;
+  },
+  contentFormats: string[],
+): string {
+  const isGoogle = campaign.channel.toLowerCase().includes("google");
+  const wantsImages = contentFormats.includes("images") && !isGoogle;
+  const wantsVideo = contentFormats.includes("video") && !isGoogle;
+
+  const sections: string[] = [];
+
+  sections.push(`**AD COPY** (required — 2-3 variations)
+Use proven direct-response frameworks (PAS, AIDA, BAB). For each variation:
+- Primary text (40-125 characters): benefit-driven, urgency or curiosity
+- Headline (max 40 characters): clear value proposition, use specific numbers when possible
+- Description (max 30 characters): reinforce the CTA
+- CTA suggestion (e.g. "Learn More", "Sign Up Free", "Get Started")
+Use different angles: pain-point, benefit, social-proof.
+content_type: "ad-copy"`);
+
+  if (wantsImages) {
+    sections.push(`**AD IMAGE CREATIVE** (1-2 pieces)
+Write detailed image briefs for the ad creative:
+- Visual concept: what the image shows, composition, focal point
+- Text overlay: headline and any text to appear on the image
+- Style direction: colors, mood, aesthetic (match the brand and platform)
+- Why it stops the scroll: what makes this visually compelling
+content_type: "image-prompt"`);
+  }
+
+  if (wantsVideo) {
+    sections.push(`**AD VIDEO SCRIPT** (1 piece)
+Write a 15-30 second ad video script:
+- Hook (first 3 seconds): pattern interrupt that stops the scroll
+- Problem/agitation (5-10 seconds): make the viewer feel the pain
+- Solution reveal (5-10 seconds): introduce the product as the answer
+- CTA (3-5 seconds): clear next step
+Include [VISUAL] cues and [TEXT OVERLAY] notes.
+content_type: "video-script"`);
+  }
+
+  return `You are a world-class performance marketer who has spent millions on paid ads. Generate a complete ad creative package for the campaign below.
+
+PRODUCT:
+- Name: ${product.name}
+- Description: ${product.description}
+- Market: ${product.market}
+
+TARGET AVATAR:
+- Name: ${avatar.name}
+- Who they are: ${avatar.description}
+- Pain points: ${avatar.pain_points.join(", ")}
+- Role: ${avatar.icp_details?.role ?? "N/A"}
+- Context: ${avatar.icp_details?.context ?? "N/A"}
+- Motivation: ${avatar.icp_details?.motivation ?? "N/A"}
+
+AD CAMPAIGN:
+- Platform: ${campaign.channel}
+- Angle: ${campaign.angle}
+- Hook: ${campaign.hook}
+
+GENERATE THE FOLLOWING:
+
+${sections.join("\n\n")}
+
+RULES:
+1. Every piece must be ready to use — no placeholders.
+2. Use the hook as inspiration but vary approaches across pieces.
+3. Write for the specific avatar — use their language, reference their pain points.
+4. Be specific and benefit-driven, not generic or salesy.
+5. Each ad copy variation should use a different framework (PAS, AIDA, or BAB).
+${isGoogle ? "6. This is for Google Ads — focus on search intent and keyword relevance." : `6. This is for ${campaign.channel} — prioritize visual stopping power and native feel.`}
+
+Respond with ONLY valid JSON:
+{
+  "pieces": [
+    {
+      "content_type": "ad-copy or image-prompt or video-script",
+      "title": "A short internal title for this piece",
+      "body": "The full content",
+      "cta_text": "The call-to-action text",
+      "notes": "Brief note on strategy/framework used"
+    }
+  ]
+}`;
+}
+
 // ── Generate content for a single campaign ───────────
 interface GenerateContentInput {
   campaignId: string;
@@ -154,22 +273,27 @@ export async function generateContentForCampaign(input: GenerateContentInput) {
   // Fetch product
   const { data: product } = await supabase
     .from("products")
-    .select("name, description, market, website_url")
+    .select("name, description, market, website_url, content_formats")
     .eq("id", input.productId)
     .single();
 
   if (!product) return { error: "Product not found" };
 
+  const isAdCampaign = campaign.category === "ad";
   const contentPieceType = mapContentType(campaign.content_type, campaign.channel);
 
   try {
+    const prompt = isAdCampaign
+      ? buildAdContentPrompt(campaign, avatar, product, product.content_formats ?? ["text"])
+      : buildContentPrompt(campaign, avatar, product, contentPieceType);
+
     const message = await anthropic.messages.create({
       model: "claude-sonnet-4-20250514",
       max_tokens: 4096,
       messages: [
         {
           role: "user",
-          content: buildContentPrompt(campaign, avatar, product, contentPieceType),
+          content: prompt,
         },
       ],
     });
@@ -183,7 +307,7 @@ export async function generateContentForCampaign(input: GenerateContentInput) {
     if (!jsonMatch) throw new Error("No JSON found in response");
 
     const output: {
-      pieces: { title: string; body: string; cta_text?: string; notes?: string }[];
+      pieces: { content_type?: string; title: string; body: string; cta_text?: string; notes?: string }[];
     } = JSON.parse(jsonMatch[0]);
 
     // Delete existing content pieces for this campaign before inserting new ones
@@ -197,7 +321,7 @@ export async function generateContentForCampaign(input: GenerateContentInput) {
       product_id: input.productId,
       campaign_id: input.campaignId,
       avatar_id: campaign.avatar_id,
-      type: contentPieceType,
+      type: isAdCampaign ? (piece.content_type ?? "ad-copy") : contentPieceType,
       title: piece.title,
       body: piece.body,
       metadata: {
