@@ -415,7 +415,7 @@ export async function loadContentForCampaign(campaignId: string) {
 
   const { data, error } = await supabase
     .from("content_pieces")
-    .select("id, type, title, body, metadata, status, archived, created_at, links(id, slug, click_count)")
+    .select("id, type, title, body, metadata, status, archived, posted_at, created_at, links(id, slug, click_count)")
     .eq("campaign_id", campaignId)
     .order("created_at", { ascending: false });
 
@@ -470,6 +470,58 @@ export async function toggleContentPieceArchived(
 
   revalidatePath("/content");
   revalidatePath("/archive");
+
+  return { success: true };
+}
+
+// ── Mark content piece as posted / unposted ─────────
+export async function markContentPiecePosted(
+  pieceId: string,
+  posted: boolean,
+) {
+  const supabase = await createClient();
+
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (!user) return { error: "Not authenticated" };
+
+  const { error } = await supabase
+    .from("content_pieces")
+    .update({ posted_at: posted ? new Date().toISOString() : null })
+    .eq("id", pieceId);
+
+  if (error) return { error: error.message };
+
+  revalidatePath("/content");
+  revalidatePath("/schedule");
+
+  return { success: true };
+}
+
+// ── Update content piece scheduled date ─────────────
+export async function updateContentPieceSchedule(
+  pieceId: string,
+  scheduledFor: string | null,
+) {
+  const supabase = await createClient();
+
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (!user) return { error: "Not authenticated" };
+
+  const { error } = await supabase
+    .from("content_pieces")
+    .update({ scheduled_for: scheduledFor })
+    .eq("id", pieceId);
+
+  if (error) return { error: error.message };
+
+  revalidatePath("/content");
+  revalidatePath("/schedule");
 
   return { success: true };
 }

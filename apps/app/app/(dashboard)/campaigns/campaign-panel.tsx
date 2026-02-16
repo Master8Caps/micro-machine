@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { ChannelPill, TypePill, StatusSelect, ArchivedBadge, ArchiveToggle } from "@/components/pills";
 import { CopyButton } from "@/components/copy-button";
+import { PostedToggle } from "@/components/posted-toggle";
 import { useUser } from "@/components/user-context";
 import {
   generateContentForCampaign,
@@ -26,6 +27,7 @@ interface ContentPiece {
   metadata: { cta_text?: string; notes?: string };
   status: string;
   archived: boolean;
+  posted_at: string | null;
   created_at: string;
   links?: TrackedLink[];
 }
@@ -310,6 +312,11 @@ export function CampaignPanel({ campaign, onClose }: CampaignPanelProps) {
                         className="flex shrink-0 items-center gap-1.5"
                         onClick={(e) => e.stopPropagation()}
                       >
+                        <PostedToggle
+                          pieceId={piece.id}
+                          posted={!!piece.posted_at}
+                          postedAt={piece.posted_at}
+                        />
                         <StatusSelect
                           value={piece.status}
                           onChange={(v) => handleStatusChange(piece.id, v)}

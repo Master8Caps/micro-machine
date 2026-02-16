@@ -3,6 +3,7 @@
 import { useState, useMemo } from "react";
 import { ChannelPill, TypePill, StatusSelect, ArchivedBadge, ArchiveToggle } from "@/components/pills";
 import { CopyButton } from "@/components/copy-button";
+import { PostedToggle, PostedBadge } from "@/components/posted-toggle";
 import { updateContentPieceStatus, toggleContentPieceArchived } from "@/server/actions/content";
 
 interface TrackedLink {
@@ -21,6 +22,8 @@ interface ContentPieceRow {
   metadata: { channel?: string; angle?: string; cta_text?: string; notes?: string };
   status: string;
   archived: boolean;
+  posted_at: string | null;
+  scheduled_for: string | null;
   created_at: string;
   products: { name: string } | null;
   campaigns: { angle: string; channel: string; category?: string } | null;
@@ -50,6 +53,12 @@ const statusOptions = [
   { value: "published", label: "Published" },
 ];
 
+const postedOptions = [
+  { value: "", label: "All" },
+  { value: "not-posted", label: "Not posted" },
+  { value: "posted", label: "Posted" },
+];
+
 const categoryTabs = [
   { value: "", label: "All" },
   { value: "social", label: "Social" },
@@ -75,6 +84,7 @@ export function ContentList({
   const [productFilter, setProductFilter] = useState("");
   const [typeFilter, setTypeFilter] = useState("");
   const [statusFilter, setStatusFilter] = useState("");
+  const [postedFilter, setPostedFilter] = useState("");
   const [categoryFilter, setCategoryFilter] = useState("");
   const [showArchived, setShowArchived] = useState(false);
   const [expandedId, setExpandedId] = useState<string | null>(null);
@@ -86,6 +96,8 @@ export function ContentList({
       if (productFilter && p.product_id !== productFilter) return false;
       if (typeFilter && p.type !== typeFilter) return false;
       if (statusFilter && p.status !== statusFilter) return false;
+      if (postedFilter === "posted" && !p.posted_at) return false;
+      if (postedFilter === "not-posted" && p.posted_at) return false;
       return true;
     });
     const counts: Record<string, number> = { "": visible.length };
@@ -94,13 +106,15 @@ export function ContentList({
       counts[cat] = (counts[cat] ?? 0) + 1;
     }
     return counts;
-  }, [pieces, showArchived, productFilter, typeFilter, statusFilter]);
+  }, [pieces, showArchived, productFilter, typeFilter, statusFilter, postedFilter]);
 
   const filtered = pieces.filter((p) => {
     if (p.archived !== showArchived) return false;
     if (productFilter && p.product_id !== productFilter) return false;
     if (typeFilter && p.type !== typeFilter) return false;
     if (statusFilter && p.status !== statusFilter) return false;
+    if (postedFilter === "posted" && !p.posted_at) return false;
+    if (postedFilter === "not-posted" && p.posted_at) return false;
     if (categoryFilter && getCategory(p) !== categoryFilter) return false;
     return true;
   });
@@ -109,12 +123,13 @@ export function ContentList({
     ? window.location.origin
     : process.env.NEXT_PUBLIC_APP_URL || "";
 
-  const hasActiveFilters = productFilter || typeFilter || statusFilter || showArchived;
+  const hasActiveFilters = productFilter || typeFilter || statusFilter || postedFilter || showArchived;
 
   function clearFilters() {
     setProductFilter("");
     setTypeFilter("");
     setStatusFilter("");
+    setPostedFilter("");
     setShowArchived(false);
   }
 
@@ -204,6 +219,17 @@ export function ContentList({
             </option>
           ))}
         </select>
+        <select
+          value={postedFilter}
+          onChange={(e) => setPostedFilter(e.target.value)}
+          className="rounded-lg border border-white/[0.06] bg-white/[0.02] px-3 py-2 text-sm text-zinc-300 focus:border-indigo-500/50 focus:outline-none"
+        >
+          {postedOptions.map((opt) => (
+            <option key={opt.value} value={opt.value}>
+              {opt.label}
+            </option>
+          ))}
+        </select>
         <button
           onClick={() => setShowArchived(!showArchived)}
           title={showArchived ? "View active content" : "View archived"}
@@ -236,7 +262,9 @@ export function ContentList({
           return (
             <div
               key={piece.id}
-              className="rounded-xl border border-white/[0.06] bg-white/[0.02] p-6"
+              className={`rounded-xl border border-white/[0.06] bg-white/[0.02] p-6 transition-opacity ${
+                piece.posted_at ? "opacity-60" : ""
+              }`}
             >
               {/* Product name at top */}
               {piece.products && (
@@ -252,6 +280,7 @@ export function ContentList({
                       <ChannelPill channel={piece.campaigns.channel} />
                     )}
                     <TypePill type={piece.type} />
+                    {piece.posted_at && <PostedBadge postedAt={piece.posted_at} />}
                   </div>
                   {piece.title && (
                     <h3 className="mt-2 font-semibold">{piece.title}</h3>
@@ -263,6 +292,11 @@ export function ContentList({
                   )}
                 </div>
                 <div className="flex shrink-0 items-center gap-2">
+                  <PostedToggle
+                    pieceId={piece.id}
+                    posted={!!piece.posted_at}
+                    postedAt={piece.posted_at}
+                  />
                   <CopyButton text={piece.body} />
                   <StatusSelect
                     value={piece.status}
