@@ -43,7 +43,11 @@ export default function LoginPage() {
         setLoading(false);
         return;
       }
-      await addToWaitlist(email);
+      try {
+        await addToWaitlist(email);
+      } catch {
+        // Waitlist insert is best-effort — profile.status = 'waitlist' is the gate
+      }
       setLoading(false);
       setWaitlisted(true);
     }
