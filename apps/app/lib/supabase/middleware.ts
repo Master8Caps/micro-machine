@@ -44,7 +44,9 @@ export async function updateSession(request: NextRequest) {
   }
 
   // If logged in and on login/signup page, redirect to dashboard
-  if (user && (request.nextUrl.pathname === "/login" || request.nextUrl.pathname === "/signup")) {
+  // Skip redirect for server actions (e.g. addToWaitlist called after signup)
+  const isServerAction = request.headers.get("next-action") !== null;
+  if (user && !isServerAction && (request.nextUrl.pathname === "/login" || request.nextUrl.pathname === "/signup")) {
     const url = request.nextUrl.clone();
     url.pathname = "/";
     return NextResponse.redirect(url);
