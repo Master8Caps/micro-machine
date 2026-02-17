@@ -10,8 +10,10 @@ export function Footer() {
                 <stop offset="100%" stopColor="#a78bfa" />
               </linearGradient>
             </defs>
-            <rect x="4" y="4" width="24" height="24" rx="6" fill="url(#footer-g)"/>
-            <path d="M10 10h12M10 16h9M10 22h12M10 10v12" stroke="#18181b" strokeWidth="2.8" strokeLinecap="round" strokeLinejoin="round" fill="none"/>
+            <rect x="2" y="2" width="28" height="28" rx="7" fill="url(#footer-g)"/>
+            <path d="M8 6.5h16M8 6.5v5.5M8 9.25h13M8 12h16" stroke="#1e1b4b" strokeWidth="1.7" strokeLinecap="round" fill="none"/>
+            <path d="M8 20V14l8 4.5L24 14v6" stroke="#1e1b4b" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" fill="none"/>
+            <path d="M23 22Q23 21 16 21Q9 21 9 22.5Q9 24 16 24Q23 24 23 25.5Q23 27 16 27Q9 27 9 26" stroke="#1e1b4b" strokeWidth="1.7" strokeLinecap="round" fill="none"/>
           </svg>
           <span className="text-sm font-medium text-zinc-500">
             Easy Micro SaaS
