@@ -74,9 +74,9 @@ export default function LoginPage() {
               </linearGradient>
             </defs>
             <rect x="2" y="2" width="28" height="28" rx="7" fill="url(#wl-g)"/>
-            <path d="M9,7 H23 M9,7 V14 M9,10.5 H20 M9,14 H23" stroke="white" strokeWidth="2.5" strokeLinecap="round" fill="none"/>
-            <path d="M9,21 V14 L16,18 L23,14 V21" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" fill="none"/>
-            <path d="M23,22 Q16,20 9,22.5 Q16,25 23,25 Q16,27 9,25" stroke="white" strokeWidth="2.5" strokeLinecap="round" fill="none"/>
+            <path d="M6,10 H11 M6,10 V22 M6,16 H10 M6,22 H11" stroke="white" strokeWidth="2.2" strokeLinecap="round" fill="none"/>
+            <path d="M13,22 V10 L16.5,15 L20,10 V22" stroke="white" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" fill="none"/>
+            <path d="M26,11 C26,9 22,9 22,13 C22,17 26,15 26,19 C26,23 22,23 22,21" stroke="white" strokeWidth="2.2" strokeLinecap="round" fill="none"/>
           </svg>
 
           <h1 className="mt-6 font-heading text-2xl font-bold">
