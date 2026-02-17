@@ -67,16 +67,9 @@ export default function LoginPage() {
       <div className="flex min-h-screen items-center justify-center px-6">
         <div className="w-full max-w-md text-center">
           <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 32 32" className="mx-auto">
-            <defs>
-              <linearGradient id="wl-g" x1="0" y1="0" x2="1" y2="1">
-                <stop offset="0%" stopColor="#818cf8" />
-                <stop offset="100%" stopColor="#a78bfa" />
-              </linearGradient>
-            </defs>
-            <rect x="2" y="2" width="28" height="28" rx="7" fill="url(#wl-g)"/>
-            <path d="M6,10 H11 M6,10 V22 M6,16 H10 M6,22 H11" stroke="white" strokeWidth="2.2" strokeLinecap="round" fill="none"/>
-            <path d="M13,22 V10 L16.5,15 L20,10 V22" stroke="white" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" fill="none"/>
-            <path d="M26,11 C26,9 22,9 22,13 C22,17 26,15 26,19 C26,23 22,23 22,21" stroke="white" strokeWidth="2.2" strokeLinecap="round" fill="none"/>
+            <path d="M3,8 H9 M3,8 V24 M3,16 H8 M3,24 H9" stroke="#6366f1" strokeWidth="2.5" strokeLinecap="round" fill="none"/>
+            <path d="M12,24 V8 L16,14 L20,8 V24" stroke="#6366f1" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" fill="none"/>
+            <path d="M28,10 C28,8 23,8 23,12 C23,16 28,16 28,20 C28,24 23,24 23,22" stroke="#6366f1" strokeWidth="2.5" strokeLinecap="round" fill="none"/>
           </svg>
 
           <h1 className="mt-6 font-heading text-2xl font-bold">
