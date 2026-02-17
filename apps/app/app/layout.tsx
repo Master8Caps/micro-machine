@@ -13,7 +13,7 @@ const dmSans = DM_Sans({
 });
 
 export const metadata: Metadata = {
-  title: "Micro Machine",
+  title: "Easy Micro SaaS",
   description: "Your go-to-market engine.",
 };
 

@@ -29,9 +29,11 @@ export default async function DashboardLayout({
                   <stop offset="100%" stopColor="#a78bfa"/>
                 </linearGradient>
               </defs>
-              <path d="M3 26V6l6.5 14L16 6l6.5 14L29 6v20" fill="none" stroke="url(#logo-g)" strokeWidth="2.8" strokeLinecap="round" strokeLinejoin="round"/>
+              <path d="M2 7h7M2 16h5M2 25h7M2 7v18" fill="none" stroke="url(#logo-g)" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"/>
+              <path d="M12 25V7l5.5 11L23 7v18" fill="none" stroke="url(#logo-g)" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"/>
+              <path d="M30 10.5c0-2.2-1.2-3.5-3-3.5s-3 1.3-3 3.5c0 2.2 1.2 3 3 4s3 2 3 4.2c0 2.2-1.2 3.3-3 3.3s-3-1.1-3-3.3" fill="none" stroke="url(#logo-g)" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"/>
             </svg>
-            <span className="font-heading text-sm font-semibold tracking-tight">Micro Machine</span>
+            <span className="font-heading text-sm font-semibold tracking-tight">Easy Micro SaaS</span>
           </Link>
           <SidebarNav />
           <div className="mt-auto border-t border-white/[0.06] px-3 pt-4">
