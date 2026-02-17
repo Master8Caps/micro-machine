@@ -16,7 +16,7 @@ function getWeekRange(offset: number) {
 
   return {
     startDate: monday.toISOString().split("T")[0],
-    endDate: sunday.toISOString().split("T")[0],
+    endDate: `${sunday.toISOString().split("T")[0]}T23:59:59.999Z`,
   };
 }
 

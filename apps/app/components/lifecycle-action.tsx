@@ -25,9 +25,11 @@ const statusConfig: Record<LifecycleStatus, { label: string; style: string }> = 
   },
 };
 
-function formatDate(dateStr: string) {
+function formatDateTime(dateStr: string) {
   const d = new Date(dateStr);
-  return d.toLocaleDateString("en-US", { month: "short", day: "numeric" });
+  const date = d.toLocaleDateString("en-US", { month: "short", day: "numeric" });
+  const time = d.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit", hour12: true });
+  return `${date} ${time}`;
 }
 
 export function LifecycleAction({
@@ -117,10 +119,10 @@ export function LifecycleAction({
       >
         {config.label}
         {status === "scheduled" && scheduledFor && (
-          <span className="ml-1 opacity-70">· {formatDate(scheduledFor)}</span>
+          <span className="ml-1 opacity-70">· {formatDateTime(scheduledFor)}</span>
         )}
         {status === "posted" && postedAt && (
-          <span className="ml-1 opacity-70">· {formatDate(postedAt)}</span>
+          <span className="ml-1 opacity-70">· {formatDateTime(postedAt)}</span>
         )}
       </button>
 

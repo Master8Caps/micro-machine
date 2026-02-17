@@ -76,13 +76,19 @@ export function ScheduleCalendar({
   const weekDays = useMemo(() => getWeekDays(weekOffset), [weekOffset]);
   const todayStr = new Date().toISOString().split("T")[0];
 
-  // Group scheduled pieces by date
+  // Group scheduled pieces by date (extract date from timestamp)
   const piecesByDate = useMemo(() => {
     const groups: Record<string, SchedulePiece[]> = {};
     for (const piece of scheduled) {
-      const date = piece.scheduled_for!;
+      const date = piece.scheduled_for!.split("T")[0];
       if (!groups[date]) groups[date] = [];
       groups[date].push(piece);
+    }
+    // Sort pieces within each day by time
+    for (const date of Object.keys(groups)) {
+      groups[date].sort((a, b) =>
+        (a.scheduled_for ?? "").localeCompare(b.scheduled_for ?? ""),
+      );
     }
     return groups;
   }, [scheduled]);
@@ -337,11 +343,22 @@ function CalendarCard({
         <p className="mt-1 truncate text-xs font-medium text-zinc-300">
           {piece.title ?? piece.campaigns?.angle ?? "Untitled"}
         </p>
-        {piece.products && (
-          <p className="truncate text-[10px] text-zinc-600">
-            {piece.products.name}
-          </p>
-        )}
+        <div className="flex items-center gap-1.5">
+          {piece.scheduled_for && (
+            <p className="text-[10px] text-indigo-400/70">
+              {new Date(piece.scheduled_for).toLocaleTimeString("en-US", {
+                hour: "numeric",
+                minute: "2-digit",
+                hour12: true,
+              })}
+            </p>
+          )}
+          {piece.products && (
+            <p className="truncate text-[10px] text-zinc-600">
+              {piece.products.name}
+            </p>
+          )}
+        </div>
       </button>
 
       {/* Expanded view */}

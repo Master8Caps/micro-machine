@@ -454,6 +454,7 @@ export async function updateContentPieceStatus(
       break;
     case "scheduled":
       if (!scheduledFor) return { error: "Date is required for scheduling" };
+      if (isNaN(new Date(scheduledFor).getTime())) return { error: "Invalid date format" };
       updates.scheduled_for = scheduledFor;
       updates.posted_at = null;
       break;

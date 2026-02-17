@@ -17,6 +17,16 @@ const MONTHS = [
   "July", "August", "September", "October", "November", "December",
 ];
 
+const TIME_SLOTS = Array.from({ length: 32 }, (_, i) => {
+  const hour = Math.floor(i / 2) + 6;
+  const minute = (i % 2) * 30;
+  const value = `${String(hour).padStart(2, "0")}:${String(minute).padStart(2, "0")}`;
+  const h12 = hour > 12 ? hour - 12 : hour === 0 ? 12 : hour;
+  const ampm = hour >= 12 ? "PM" : "AM";
+  const label = `${h12}:${String(minute).padStart(2, "0")} ${ampm}`;
+  return { value, label };
+});
+
 export function DatePicker({
   value,
   onChange,
@@ -32,7 +42,32 @@ export function DatePicker({
   const initial = value ? new Date(value) : today;
   const [viewYear, setViewYear] = useState(initial.getFullYear());
   const [viewMonth, setViewMonth] = useState(initial.getMonth());
+
+  // Parse existing value for day and time
+  const [selectedDay, setSelectedDay] = useState<string | null>(() => {
+    if (value) return value.split("T")[0];
+    return null;
+  });
+  const [selectedTime, setSelectedTime] = useState<string>(() => {
+    if (value && value.includes("T")) {
+      const d = new Date(value);
+      return `${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`;
+    }
+    return "09:00";
+  });
+
   const ref = useRef<HTMLDivElement>(null);
+  const timeGridRef = useRef<HTMLDivElement>(null);
+
+  // Scroll selected time into view when day is picked
+  useEffect(() => {
+    if (selectedDay && timeGridRef.current) {
+      const selected = timeGridRef.current.querySelector("[data-selected]");
+      if (selected) {
+        selected.scrollIntoView({ block: "center", behavior: "instant" });
+      }
+    }
+  }, [selectedDay]);
 
   // Close on click outside
   useEffect(() => {
@@ -74,7 +109,15 @@ export function DatePicker({
 
   function selectDay(day: number) {
     const dateStr = `${viewYear}-${String(viewMonth + 1).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
-    onChange(dateStr);
+    setSelectedDay(dateStr);
+  }
+
+  function handleConfirm() {
+    if (!selectedDay) return;
+    const [hours, minutes] = selectedTime.split(":").map(Number);
+    const d = new Date(`${selectedDay}T00:00:00`);
+    d.setHours(hours, minutes, 0, 0);
+    onChange(d.toISOString());
     onClose();
   }
 
@@ -87,6 +130,10 @@ export function DatePicker({
   for (let d = 1; d <= daysInMonth; d++) cells.push(d);
   // Pad to fill last row
   while (cells.length % 7 !== 0) cells.push(null);
+
+  const confirmLabel = selectedDay
+    ? `${new Date(`${selectedDay}T12:00:00`).toLocaleDateString("en-US", { month: "short", day: "numeric" })} at ${TIME_SLOTS.find((s) => s.value === selectedTime)?.label}`
+    : "";
 
   return (
     <div
@@ -134,7 +181,7 @@ export function DatePicker({
 
           const dateStr = `${viewYear}-${String(viewMonth + 1).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
           const isToday = dateStr === todayStr;
-          const isSelected = dateStr === value;
+          const isSelected = dateStr === selectedDay;
           const isPast = dateStr < todayStr;
 
           return (
@@ -156,6 +203,41 @@ export function DatePicker({
           );
         })}
       </div>
+
+      {/* Time selector — shown after day is selected */}
+      {selectedDay && (
+        <>
+          <div className="mt-3 border-t border-white/[0.06] pt-3">
+            <p className="mb-2 text-xs font-medium text-zinc-400">Time</p>
+            <div
+              ref={timeGridRef}
+              className="grid max-h-[140px] grid-cols-3 gap-1 overflow-y-auto pr-1"
+            >
+              {TIME_SLOTS.map((slot) => (
+                <button
+                  key={slot.value}
+                  onClick={() => setSelectedTime(slot.value)}
+                  {...(selectedTime === slot.value ? { "data-selected": true } : {})}
+                  className={`rounded-md px-2 py-1.5 text-xs transition-colors ${
+                    selectedTime === slot.value
+                      ? "bg-indigo-500/30 font-medium text-indigo-200"
+                      : "text-zinc-400 hover:bg-white/[0.05] hover:text-zinc-200"
+                  }`}
+                >
+                  {slot.label}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <button
+            onClick={handleConfirm}
+            className="mt-3 w-full rounded-lg bg-indigo-500/20 py-2 text-sm font-medium text-indigo-300 transition-colors hover:bg-indigo-500/30"
+          >
+            Schedule for {confirmLabel}
+          </button>
+        </>
+      )}
     </div>
   );
 }
