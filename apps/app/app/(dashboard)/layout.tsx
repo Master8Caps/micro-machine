@@ -30,9 +30,9 @@ export default async function DashboardLayout({
                 </linearGradient>
               </defs>
               <rect x="2" y="2" width="28" height="28" rx="7" fill="url(#logo-g)"/>
-              <path d="M8 6.5h16M8 6.5v5.5M8 9.25h13M8 12h16" stroke="#1e1b4b" strokeWidth="1.7" strokeLinecap="round" fill="none"/>
-              <path d="M8 20V14l8 4.5L24 14v6" stroke="#1e1b4b" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" fill="none"/>
-              <path d="M23 22Q23 21 16 21Q9 21 9 22.5Q9 24 16 24Q23 24 23 25.5Q23 27 16 27Q9 27 9 26" stroke="#1e1b4b" strokeWidth="1.7" strokeLinecap="round" fill="none"/>
+              <path d="M9,7 H23 M9,7 V14 M9,10.5 H20 M9,14 H23" stroke="white" strokeWidth="2.5" strokeLinecap="round" fill="none"/>
+              <path d="M9,21 V14 L16,18 L23,14 V21" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" fill="none"/>
+              <path d="M23,22 Q16,20 9,22.5 Q16,25 23,25 Q16,27 9,25" stroke="white" strokeWidth="2.5" strokeLinecap="round" fill="none"/>
             </svg>
             <span className="font-heading text-sm font-semibold tracking-tight">Easy Micro SaaS</span>
           </Link>
