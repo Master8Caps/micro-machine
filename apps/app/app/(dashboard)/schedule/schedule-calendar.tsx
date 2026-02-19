@@ -325,27 +325,13 @@ function CalendarCard({
         onClick={onToggleExpand}
         className="w-full p-2 text-left"
       >
-        <div className="flex items-center gap-1.5">
+        {/* Row 1: channel pill + time */}
+        <div className="flex items-center justify-between gap-1">
           {piece.campaigns && (
             <ChannelPill channel={piece.campaigns.channel} />
           )}
-          <div className="flex-1" />
-          <div onClick={(e) => e.stopPropagation()}>
-            <LifecycleAction
-              pieceId={piece.id}
-              status={piece.status}
-              scheduledFor={piece.scheduled_for}
-              postedAt={piece.posted_at}
-              onStatusChange={onLifecycleChange}
-            />
-          </div>
-        </div>
-        <p className="mt-1 truncate text-xs font-medium text-zinc-300">
-          {piece.title ?? piece.campaigns?.angle ?? "Untitled"}
-        </p>
-        <div className="flex items-center gap-1.5">
           {piece.scheduled_for && (
-            <p className="text-[10px] text-indigo-400/70">
+            <p className="shrink-0 text-[10px] text-indigo-400/70">
               {new Date(piece.scheduled_for).toLocaleTimeString("en-US", {
                 hour: "numeric",
                 minute: "2-digit",
@@ -353,31 +339,50 @@ function CalendarCard({
               })}
             </p>
           )}
-          {piece.products && (
-            <p className="truncate text-[10px] text-zinc-600">
-              {piece.products.name}
-            </p>
-          )}
+        </div>
+
+        {/* Row 2: title */}
+        <p className="mt-1 truncate text-xs font-medium text-zinc-300">
+          {piece.title ?? piece.campaigns?.angle ?? "Untitled"}
+        </p>
+
+        {/* Row 3: product name */}
+        {piece.products && (
+          <p className="truncate text-[10px] text-zinc-600">
+            {piece.products.name}
+          </p>
+        )}
+
+        {/* Row 4: lifecycle action */}
+        <div className="mt-1.5" onClick={(e) => e.stopPropagation()}>
+          <LifecycleAction
+            pieceId={piece.id}
+            status={piece.status}
+            scheduledFor={piece.scheduled_for}
+            postedAt={piece.posted_at}
+            onStatusChange={onLifecycleChange}
+          />
         </div>
       </button>
 
       {/* Expanded view */}
       {expanded && (
         <div className="border-t border-white/[0.06] p-2">
-          <div className="flex items-center gap-1.5">
+          <div className="flex items-center justify-between gap-1">
             <TypePill type={piece.type} />
-            <div className="flex-1" />
-            <CopyButton text={piece.body} />
-            <button
-              onClick={onUnschedule}
-              title="Unschedule"
-              className="rounded-md p-1 text-zinc-500 transition-colors hover:bg-white/[0.05] hover:text-zinc-300"
-            >
-              <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M18 6 6 18" />
-                <path d="m6 6 12 12" />
-              </svg>
-            </button>
+            <div className="flex items-center gap-1">
+              <CopyButton text={piece.body} />
+              <button
+                onClick={onUnschedule}
+                title="Unschedule"
+                className="rounded-md p-1 text-zinc-500 transition-colors hover:bg-white/[0.05] hover:text-zinc-300"
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M18 6 6 18" />
+                  <path d="m6 6 12 12" />
+                </svg>
+              </button>
+            </div>
           </div>
           <p className="mt-2 whitespace-pre-wrap text-xs leading-relaxed text-zinc-400">
             {piece.body}

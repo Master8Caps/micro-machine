@@ -107,15 +107,23 @@ export function LifecycleAction({
 
   return (
     <div
-      className="relative flex items-center gap-1.5"
+      className="relative flex flex-wrap items-center gap-1.5"
       onClick={(e) => e.stopPropagation()}
     >
       {/* Status badge */}
       <button
         onClick={() => setShowRevert(!showRevert)}
         disabled={saving}
-        className={`rounded-full border px-2.5 py-0.5 text-xs font-medium transition-colors disabled:opacity-50 ${config.style}`}
-        title={status === "draft" ? "Draft" : "Click to change status"}
+        className={`max-w-full truncate rounded-full border px-2.5 py-0.5 text-xs font-medium transition-colors disabled:opacity-50 ${config.style}`}
+        title={
+          status === "scheduled" && scheduledFor
+            ? `Scheduled · ${formatDateTime(scheduledFor)}`
+            : status === "posted" && postedAt
+              ? `Posted · ${formatDateTime(postedAt)}`
+              : status === "draft"
+                ? "Draft"
+                : "Click to change status"
+        }
       >
         {config.label}
         {status === "scheduled" && scheduledFor && (
@@ -159,7 +167,7 @@ export function LifecycleAction({
 
       {/* Revert dropdown */}
       {showRevert && status !== "draft" && (
-        <div className="absolute left-0 top-full z-50 mt-1 rounded-lg border border-white/[0.08] bg-zinc-900 py-1 shadow-xl">
+        <div className="absolute right-0 top-full z-50 mt-1 rounded-lg border border-white/[0.08] bg-zinc-900 py-1 shadow-xl">
           {status === "approved" && (
             <button
               onClick={() => transition("draft")}
@@ -201,7 +209,7 @@ export function LifecycleAction({
 
       {/* Date picker popover */}
       {showDatePicker && (
-        <div className="absolute left-0 top-full z-50 mt-1">
+        <div className="absolute right-0 top-full z-50 mt-1">
           <DatePicker
             value={scheduledFor}
             onChange={handleScheduleDate}
