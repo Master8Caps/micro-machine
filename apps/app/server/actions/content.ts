@@ -477,6 +477,58 @@ export async function updateContentPieceStatus(
   return { success: true };
 }
 
+// ── Bulk update content piece lifecycle status ───────
+export async function updateContentPiecesStatusBulk(
+  pieceIds: string[],
+  newStatus: "approved" | "scheduled" | "posted",
+  scheduledFor?: string | null,
+) {
+  if (!pieceIds.length) return { error: "No pieces selected" };
+
+  const supabase = await createClient();
+
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (!user) return { error: "Not authenticated" };
+
+  const updates: {
+    status: string;
+    posted_at?: string | null;
+    scheduled_for?: string | null;
+  } = { status: newStatus };
+
+  switch (newStatus) {
+    case "approved":
+      updates.posted_at = null;
+      updates.scheduled_for = null;
+      break;
+    case "scheduled":
+      if (!scheduledFor) return { error: "Date is required for scheduling" };
+      if (isNaN(new Date(scheduledFor).getTime())) return { error: "Invalid date format" };
+      updates.scheduled_for = scheduledFor;
+      updates.posted_at = null;
+      break;
+    case "posted":
+      updates.posted_at = new Date().toISOString();
+      break;
+  }
+
+  const { error, count } = await supabase
+    .from("content_pieces")
+    .update(updates)
+    .in("id", pieceIds);
+
+  if (error) return { error: error.message };
+
+  revalidatePath("/content");
+  revalidatePath("/schedule");
+  revalidatePath("/campaigns");
+
+  return { success: true, updatedCount: count ?? pieceIds.length };
+}
+
 // ── Toggle content piece archived flag ───────────────
 export async function toggleContentPieceArchived(
   pieceId: string,

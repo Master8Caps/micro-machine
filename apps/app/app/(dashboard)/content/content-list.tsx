@@ -1,10 +1,14 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { ChannelPill, TypePill, ArchivedBadge, ArchiveToggle } from "@/components/pills";
 import { CopyButton } from "@/components/copy-button";
 import { LifecycleAction } from "@/components/lifecycle-action";
-import { toggleContentPieceArchived } from "@/server/actions/content";
+import { DatePicker } from "@/components/date-picker";
+import {
+  toggleContentPieceArchived,
+  updateContentPiecesStatusBulk,
+} from "@/server/actions/content";
 
 interface TrackedLink {
   id: string;
@@ -83,6 +87,11 @@ export function ContentList({
   const [showArchived, setShowArchived] = useState(false);
   const [expandedId, setExpandedId] = useState<string | null>(null);
 
+  // Bulk selection state
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [bulkActing, setBulkActing] = useState(false);
+  const [showBulkDatePicker, setShowBulkDatePicker] = useState(false);
+
   // Compute category counts (respecting all filters except category)
   const categoryCounts = useMemo(() => {
     const visible = pieces.filter((p) => {
@@ -100,14 +109,23 @@ export function ContentList({
     return counts;
   }, [pieces, showArchived, productFilter, typeFilter, statusFilter]);
 
-  const filtered = pieces.filter((p) => {
-    if (p.archived !== showArchived) return false;
-    if (productFilter && p.product_id !== productFilter) return false;
-    if (typeFilter && p.type !== typeFilter) return false;
-    if (statusFilter && p.status !== statusFilter) return false;
-    if (categoryFilter && getCategory(p) !== categoryFilter) return false;
-    return true;
-  });
+  const filtered = useMemo(
+    () =>
+      pieces.filter((p) => {
+        if (p.archived !== showArchived) return false;
+        if (productFilter && p.product_id !== productFilter) return false;
+        if (typeFilter && p.type !== typeFilter) return false;
+        if (statusFilter && p.status !== statusFilter) return false;
+        if (categoryFilter && getCategory(p) !== categoryFilter) return false;
+        return true;
+      }),
+    [pieces, showArchived, productFilter, typeFilter, statusFilter, categoryFilter],
+  );
+
+  // Clear selection when filters change
+  useEffect(() => {
+    setSelectedIds(new Set());
+  }, [productFilter, typeFilter, statusFilter, categoryFilter, showArchived]);
 
   const baseUrl = typeof window !== "undefined"
     ? window.location.origin
@@ -151,6 +169,83 @@ export function ContentList({
     }
   }
 
+  // ── Selection helpers ──────────────────────────────
+  function toggleSelected(id: string) {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  }
+
+  const filteredIds = useMemo(() => new Set(filtered.map((p) => p.id)), [filtered]);
+  const allFilteredSelected = filtered.length > 0 && filtered.every((p) => selectedIds.has(p.id));
+
+  function toggleSelectAll() {
+    if (allFilteredSelected) {
+      setSelectedIds(new Set());
+    } else {
+      setSelectedIds(new Set(filtered.map((p) => p.id)));
+    }
+  }
+
+  // ── Bulk action context ────────────────────────────
+  const selectedPieces = useMemo(
+    () => pieces.filter((p) => selectedIds.has(p.id)),
+    [pieces, selectedIds],
+  );
+  const hasApprovable = selectedPieces.some((p) => p.status === "draft");
+  const hasSchedulable = selectedPieces.some((p) => p.status === "draft" || p.status === "approved");
+  const hasPostable = selectedPieces.some((p) => p.status === "scheduled");
+
+  async function handleBulkAction(
+    action: "approved" | "scheduled" | "posted",
+    scheduledFor?: string | null,
+  ) {
+    setBulkActing(true);
+    setShowBulkDatePicker(false);
+
+    // Only include pieces in valid source statuses
+    let targetIds: string[];
+    if (action === "approved") {
+      targetIds = selectedPieces.filter((p) => p.status === "draft").map((p) => p.id);
+    } else if (action === "scheduled") {
+      targetIds = selectedPieces.filter((p) => p.status === "draft" || p.status === "approved").map((p) => p.id);
+    } else {
+      targetIds = selectedPieces.filter((p) => p.status === "scheduled").map((p) => p.id);
+    }
+
+    if (targetIds.length === 0) {
+      setBulkActing(false);
+      return;
+    }
+
+    // Optimistic update
+    const now = new Date().toISOString();
+    setPieces((prev) =>
+      prev.map((p) => {
+        if (!targetIds.includes(p.id)) return p;
+        return {
+          ...p,
+          status: action,
+          scheduled_for: action === "scheduled" ? (scheduledFor ?? null) : action === "approved" ? null : p.scheduled_for,
+          posted_at: action === "posted" ? now : action === "approved" || action === "scheduled" ? null : p.posted_at,
+        };
+      }),
+    );
+    setSelectedIds(new Set());
+
+    const result = await updateContentPiecesStatusBulk(targetIds, action, scheduledFor);
+
+    if (result.error) {
+      // Rollback — re-fetch would be more robust but for now just revert state
+      setPieces(initialPieces);
+    }
+
+    setBulkActing(false);
+  }
+
   return (
     <>
       {/* Row 1: Category tabs + count */}
@@ -182,6 +277,36 @@ export function ContentList({
 
       {/* Row 2: Secondary filters */}
       <div className="mb-6 flex flex-wrap items-center gap-3">
+        {/* Select all checkbox */}
+        <button
+          onClick={toggleSelectAll}
+          title={allFilteredSelected ? "Deselect all" : "Select all visible"}
+          className={`flex h-[38px] items-center gap-2 rounded-lg border px-3 text-sm transition-colors ${
+            allFilteredSelected
+              ? "border-indigo-500/30 bg-indigo-500/10 text-indigo-300"
+              : "border-white/[0.06] text-zinc-500 hover:text-zinc-300"
+          }`}
+        >
+          <span className={`flex h-4 w-4 items-center justify-center rounded border ${
+            allFilteredSelected
+              ? "border-indigo-400 bg-indigo-500"
+              : selectedIds.size > 0
+                ? "border-indigo-400 bg-indigo-500/50"
+                : "border-zinc-600"
+          }`}>
+            {(allFilteredSelected || selectedIds.size > 0) && (
+              <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+                {allFilteredSelected ? (
+                  <path d="M20 6 9 17l-5-5" />
+                ) : (
+                  <path d="M5 12h14" />
+                )}
+              </svg>
+            )}
+          </span>
+          <span className="hidden sm:inline">Select all</span>
+        </button>
+
         <select
           value={productFilter}
           onChange={(e) => setProductFilter(e.target.value)}
@@ -244,94 +369,184 @@ export function ContentList({
       <div className="space-y-4">
         {filtered.map((piece) => {
           const isExpanded = expandedId === piece.id;
+          const isSelected = selectedIds.has(piece.id);
 
           return (
             <div
               key={piece.id}
-              className={`rounded-xl border border-white/[0.06] bg-white/[0.02] p-6 transition-opacity ${
-                piece.status === "posted" ? "opacity-60" : ""
-              }`}
+              className={`flex gap-4 rounded-xl border p-6 transition-all ${
+                isSelected
+                  ? "border-indigo-500/30 bg-indigo-500/[0.04]"
+                  : "border-white/[0.06] bg-white/[0.02]"
+              } ${piece.status === "posted" ? "opacity-60" : ""}`}
             >
-              {/* Product name at top */}
-              {piece.products && (
-                <p className="mb-2 text-sm font-medium text-zinc-400">
-                  {piece.products.name}
-                </p>
-              )}
-
-              <div className="flex items-start justify-between gap-4">
-                <div className="min-w-0 flex-1">
-                  <div className="flex flex-wrap items-center gap-2">
-                    {piece.campaigns && (
-                      <ChannelPill channel={piece.campaigns.channel} />
-                    )}
-                    <TypePill type={piece.type} />
-                  </div>
-                  {piece.title && (
-                    <h3 className="mt-2 font-semibold">{piece.title}</h3>
-                  )}
-                  {piece.campaigns?.angle && (
-                    <p className="mt-1 text-xs text-zinc-500">
-                      {piece.campaigns.angle}
-                    </p>
-                  )}
-                </div>
-                <div className="flex shrink-0 items-center gap-2">
-                  <CopyButton text={piece.body} />
-                  <LifecycleAction
-                    pieceId={piece.id}
-                    status={piece.status}
-                    scheduledFor={piece.scheduled_for}
-                    postedAt={piece.posted_at}
-                    onStatusChange={(s, sf, pa) => handleLifecycleChange(piece.id, s, sf, pa)}
-                  />
-                  {piece.archived && <ArchivedBadge />}
-                  <ArchiveToggle
-                    archived={piece.archived}
-                    onToggle={() => handleArchiveToggle(piece.id, piece.archived)}
-                  />
-                </div>
-              </div>
-
-              {/* Tracked link */}
-              {piece.links && piece.links.length > 0 && (
-                <div className="mt-2 flex items-center gap-2 rounded-md bg-white/[0.03] px-3 py-1.5">
-                  <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="shrink-0 text-indigo-400">
-                    <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71" />
-                    <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71" />
-                  </svg>
-                  <span className="min-w-0 flex-1 truncate font-mono text-xs text-indigo-400">
-                    {baseUrl}/r/{piece.links[0].slug}
-                  </span>
-                  <span className="shrink-0 text-xs text-zinc-500">
-                    {piece.links[0].click_count} click{piece.links[0].click_count === 1 ? "" : "s"}
-                  </span>
-                  <CopyButton text={`${baseUrl}/r/${piece.links[0].slug}`} />
-                </div>
-              )}
-
-              {/* Body preview / expand */}
+              {/* Checkbox */}
               <button
-                onClick={() => setExpandedId(isExpanded ? null : piece.id)}
-                className="mt-3 w-full text-left"
+                onClick={() => toggleSelected(piece.id)}
+                className="mt-1 shrink-0"
               >
-                <p
-                  className={`whitespace-pre-wrap text-sm leading-relaxed text-zinc-300 ${
-                    isExpanded ? "" : "line-clamp-3"
-                  }`}
-                >
-                  {piece.body}
-                </p>
-                {!isExpanded && piece.body.length > 200 && (
-                  <span className="mt-1 inline-block text-xs text-zinc-500">
-                    Click to expand...
-                  </span>
-                )}
+                <span className={`flex h-4 w-4 items-center justify-center rounded border transition-colors ${
+                  isSelected
+                    ? "border-indigo-400 bg-indigo-500"
+                    : "border-zinc-600 hover:border-zinc-400"
+                }`}>
+                  {isSelected && (
+                    <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M20 6 9 17l-5-5" />
+                    </svg>
+                  )}
+                </span>
               </button>
+
+              {/* Card content */}
+              <div className="min-w-0 flex-1">
+                {/* Product name at top */}
+                {piece.products && (
+                  <p className="mb-2 text-sm font-medium text-zinc-400">
+                    {piece.products.name}
+                  </p>
+                )}
+
+                <div className="flex items-start justify-between gap-4">
+                  <div className="min-w-0 flex-1">
+                    <div className="flex flex-wrap items-center gap-2">
+                      {piece.campaigns && (
+                        <ChannelPill channel={piece.campaigns.channel} />
+                      )}
+                      <TypePill type={piece.type} />
+                    </div>
+                    {piece.title && (
+                      <h3 className="mt-2 font-semibold">{piece.title}</h3>
+                    )}
+                    {piece.campaigns?.angle && (
+                      <p className="mt-1 text-xs text-zinc-500">
+                        {piece.campaigns.angle}
+                      </p>
+                    )}
+                  </div>
+                  <div className="flex shrink-0 items-center gap-2">
+                    <CopyButton text={piece.body} />
+                    <LifecycleAction
+                      pieceId={piece.id}
+                      status={piece.status}
+                      scheduledFor={piece.scheduled_for}
+                      postedAt={piece.posted_at}
+                      onStatusChange={(s, sf, pa) => handleLifecycleChange(piece.id, s, sf, pa)}
+                    />
+                    {piece.archived && <ArchivedBadge />}
+                    <ArchiveToggle
+                      archived={piece.archived}
+                      onToggle={() => handleArchiveToggle(piece.id, piece.archived)}
+                    />
+                  </div>
+                </div>
+
+                {/* Tracked link */}
+                {piece.links && piece.links.length > 0 && (
+                  <div className="mt-2 flex items-center gap-2 rounded-md bg-white/[0.03] px-3 py-1.5">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="shrink-0 text-indigo-400">
+                      <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71" />
+                      <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71" />
+                    </svg>
+                    <span className="min-w-0 flex-1 truncate font-mono text-xs text-indigo-400">
+                      {baseUrl}/r/{piece.links[0].slug}
+                    </span>
+                    <span className="shrink-0 text-xs text-zinc-500">
+                      {piece.links[0].click_count} click{piece.links[0].click_count === 1 ? "" : "s"}
+                    </span>
+                    <CopyButton text={`${baseUrl}/r/${piece.links[0].slug}`} />
+                  </div>
+                )}
+
+                {/* Body preview / expand */}
+                <button
+                  onClick={() => setExpandedId(isExpanded ? null : piece.id)}
+                  className="mt-3 w-full text-left"
+                >
+                  <p
+                    className={`whitespace-pre-wrap text-sm leading-relaxed text-zinc-300 ${
+                      isExpanded ? "" : "line-clamp-3"
+                    }`}
+                  >
+                    {piece.body}
+                  </p>
+                  {!isExpanded && piece.body.length > 200 && (
+                    <span className="mt-1 inline-block text-xs text-zinc-500">
+                      Click to expand...
+                    </span>
+                  )}
+                </button>
+              </div>
             </div>
           );
         })}
       </div>
+
+      {/* Bulk action toolbar */}
+      {selectedIds.size > 0 && (
+        <div className="fixed bottom-4 left-1/2 z-40 -translate-x-1/2">
+          <div className="flex items-center gap-3 rounded-xl border border-white/[0.1] bg-zinc-900 px-5 py-3 shadow-2xl">
+            <span className="text-sm font-medium text-zinc-300">
+              {selectedIds.size} selected
+            </span>
+
+            <div className="h-4 w-px bg-white/[0.1]" />
+
+            {hasApprovable && (
+              <button
+                onClick={() => handleBulkAction("approved")}
+                disabled={bulkActing}
+                className="rounded-lg border border-blue-500/30 bg-blue-500/10 px-3 py-1.5 text-xs font-medium text-blue-400 transition-colors hover:bg-blue-500/20 disabled:opacity-50"
+              >
+                {bulkActing ? "..." : "Approve"}
+              </button>
+            )}
+
+            {hasSchedulable && (
+              <div className="relative">
+                <button
+                  onClick={() => setShowBulkDatePicker(!showBulkDatePicker)}
+                  disabled={bulkActing}
+                  className="rounded-lg border border-violet-500/30 bg-violet-500/10 px-3 py-1.5 text-xs font-medium text-violet-400 transition-colors hover:bg-violet-500/20 disabled:opacity-50"
+                >
+                  {bulkActing ? "..." : "Schedule"}
+                </button>
+                {showBulkDatePicker && (
+                  <div className="absolute bottom-full left-1/2 z-50 mb-2 -translate-x-1/2">
+                    <DatePicker
+                      onChange={(date) => handleBulkAction("scheduled", date)}
+                      onClose={() => setShowBulkDatePicker(false)}
+                    />
+                  </div>
+                )}
+              </div>
+            )}
+
+            {hasPostable && (
+              <button
+                onClick={() => handleBulkAction("posted")}
+                disabled={bulkActing}
+                className="rounded-lg border border-emerald-500/30 bg-emerald-500/10 px-3 py-1.5 text-xs font-medium text-emerald-400 transition-colors hover:bg-emerald-500/20 disabled:opacity-50"
+              >
+                {bulkActing ? "..." : "Mark Posted"}
+              </button>
+            )}
+
+            <div className="h-4 w-px bg-white/[0.1]" />
+
+            <button
+              onClick={() => setSelectedIds(new Set())}
+              className="rounded-md p-1 text-zinc-500 transition-colors hover:text-zinc-300"
+              title="Clear selection"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M18 6 6 18" />
+                <path d="m6 6 12 12" />
+              </svg>
+            </button>
+          </div>
+        </div>
+      )}
     </>
   );
 }
