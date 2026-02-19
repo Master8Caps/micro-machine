@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { ChannelPill, TypePill } from "@/components/pills";
 import { CopyButton } from "@/components/copy-button";
@@ -71,7 +71,7 @@ export function ScheduleCalendar({
   const [scheduled, setScheduled] = useState(initialScheduled);
   const [unscheduled, setUnscheduled] = useState(initialUnscheduled);
   const [productFilter, setProductFilter] = useState("");
-  const [expandedPiece, setExpandedPiece] = useState<string | null>(null);
+  const [selectedPiece, setSelectedPiece] = useState<SchedulePiece | null>(null);
 
   const weekDays = useMemo(() => getWeekDays(weekOffset), [weekOffset]);
   const todayStr = new Date().toISOString().split("T")[0];
@@ -106,6 +106,7 @@ export function ScheduleCalendar({
       if (piece) {
         setScheduled((prev) => prev.filter((p) => p.id !== pieceId));
         setUnscheduled((prev) => [{ ...piece, scheduled_for: null, status: "approved" }, ...prev]);
+        if (selectedPiece?.id === pieceId) setSelectedPiece(null);
       }
     }
   }
@@ -115,8 +116,10 @@ export function ScheduleCalendar({
     if (newStatus === "scheduled" && scheduledFor) {
       const fromUnscheduled = unscheduled.find((p) => p.id === pieceId);
       if (fromUnscheduled) {
+        const updated = { ...fromUnscheduled, status: newStatus, scheduled_for: scheduledFor, posted_at: null };
         setUnscheduled((prev) => prev.filter((p) => p.id !== pieceId));
-        setScheduled((prev) => [...prev, { ...fromUnscheduled, status: newStatus, scheduled_for: scheduledFor, posted_at: null }]);
+        setScheduled((prev) => [...prev, updated]);
+        if (selectedPiece?.id === pieceId) setSelectedPiece(updated);
         return;
       }
     }
@@ -125,35 +128,39 @@ export function ScheduleCalendar({
     if (newStatus === "draft" || newStatus === "approved") {
       const fromScheduled = scheduled.find((p) => p.id === pieceId);
       if (fromScheduled) {
+        const updated = { ...fromScheduled, status: newStatus, scheduled_for: null, posted_at: null };
         setScheduled((prev) => prev.filter((p) => p.id !== pieceId));
-        setUnscheduled((prev) => [{ ...fromScheduled, status: newStatus, scheduled_for: null, posted_at: null }, ...prev]);
+        setUnscheduled((prev) => [updated, ...prev]);
+        if (selectedPiece?.id === pieceId) setSelectedPiece(updated);
         return;
       }
     }
 
     // Otherwise update in place
     setScheduled((prev) =>
-      prev.map((p) =>
-        p.id === pieceId
-          ? {
-              ...p,
-              status: newStatus,
-              scheduled_for: newStatus === "scheduled" ? (scheduledFor ?? p.scheduled_for) : p.scheduled_for,
-              posted_at: newStatus === "posted" ? (postedAt ?? new Date().toISOString()) : newStatus === "draft" || newStatus === "approved" || newStatus === "scheduled" ? null : p.posted_at,
-            }
-          : p,
-      ),
+      prev.map((p) => {
+        if (p.id !== pieceId) return p;
+        const updated = {
+          ...p,
+          status: newStatus,
+          scheduled_for: newStatus === "scheduled" ? (scheduledFor ?? p.scheduled_for) : p.scheduled_for,
+          posted_at: newStatus === "posted" ? (postedAt ?? new Date().toISOString()) : newStatus === "draft" || newStatus === "approved" || newStatus === "scheduled" ? null : p.posted_at,
+        };
+        if (selectedPiece?.id === pieceId) setSelectedPiece(updated);
+        return updated;
+      }),
     );
     setUnscheduled((prev) =>
-      prev.map((p) =>
-        p.id === pieceId
-          ? {
-              ...p,
-              status: newStatus,
-              posted_at: newStatus === "posted" ? (postedAt ?? new Date().toISOString()) : newStatus === "draft" || newStatus === "approved" || newStatus === "scheduled" ? null : p.posted_at,
-            }
-          : p,
-      ),
+      prev.map((p) => {
+        if (p.id !== pieceId) return p;
+        const updated = {
+          ...p,
+          status: newStatus,
+          posted_at: newStatus === "posted" ? (postedAt ?? new Date().toISOString()) : newStatus === "draft" || newStatus === "approved" || newStatus === "scheduled" ? null : p.posted_at,
+        };
+        if (selectedPiece?.id === pieceId) setSelectedPiece(updated);
+        return updated;
+      }),
     );
   }
 
@@ -237,14 +244,7 @@ export function ScheduleCalendar({
                   <CalendarCard
                     key={piece.id}
                     piece={piece}
-                    expanded={expandedPiece === piece.id}
-                    onToggleExpand={() =>
-                      setExpandedPiece((prev) =>
-                        prev === piece.id ? null : piece.id,
-                      )
-                    }
-                    onUnschedule={() => handleUnschedule(piece.id)}
-                    onLifecycleChange={(s, sf, pa) => handleLifecycleChange(piece.id, s, sf, pa)}
+                    onSelect={() => setSelectedPiece(piece)}
                   />
                 ))}
               </div>
@@ -301,6 +301,16 @@ export function ScheduleCalendar({
           </div>
         )}
       </div>
+
+      {/* Content detail panel */}
+      {selectedPiece && (
+        <ContentPanel
+          piece={selectedPiece}
+          onClose={() => setSelectedPiece(null)}
+          onUnschedule={() => handleUnschedule(selectedPiece.id)}
+          onLifecycleChange={(s, sf, pa) => handleLifecycleChange(selectedPiece.id, s, sf, pa)}
+        />
+      )}
     </div>
   );
 }
@@ -308,88 +318,172 @@ export function ScheduleCalendar({
 // ── Calendar card (compact, in day column) ──────────
 function CalendarCard({
   piece,
-  expanded,
-  onToggleExpand,
-  onUnschedule,
-  onLifecycleChange,
+  onSelect,
 }: {
   piece: SchedulePiece;
-  expanded: boolean;
-  onToggleExpand: () => void;
-  onUnschedule: () => void;
-  onLifecycleChange: (newStatus: string, scheduledFor?: string | null, postedAt?: string | null) => void;
+  onSelect: () => void;
 }) {
+  const statusDot =
+    piece.status === "posted" ? "bg-emerald-400" :
+    piece.status === "scheduled" ? "bg-violet-400" :
+    piece.status === "approved" ? "bg-blue-400" :
+    "bg-amber-400";
+
   return (
-    <div className={`rounded-lg border bg-white/[0.03] ${piece.status === "posted" ? "border-emerald-500/20 opacity-70" : "border-white/[0.06]"}`}>
-      <button
-        onClick={onToggleExpand}
-        className="w-full p-2 text-left"
-      >
-        {/* Row 1: channel pill + time */}
-        <div className="flex items-center justify-between gap-1">
-          {piece.campaigns && (
-            <ChannelPill channel={piece.campaigns.channel} />
-          )}
-          {piece.scheduled_for && (
-            <p className="shrink-0 text-[10px] text-indigo-400/70">
-              {new Date(piece.scheduled_for).toLocaleTimeString("en-US", {
-                hour: "numeric",
-                minute: "2-digit",
-                hour12: true,
-              })}
-            </p>
-          )}
-        </div>
+    <button
+      onClick={onSelect}
+      className={`w-full rounded-lg border bg-white/[0.03] p-2 text-left transition-colors hover:bg-white/[0.06] ${
+        piece.status === "posted" ? "border-emerald-500/20 opacity-70" : "border-white/[0.06]"
+      }`}
+    >
+      {/* Row 1: channel pill + time */}
+      <div className="flex items-center justify-between gap-1">
+        {piece.campaigns && (
+          <ChannelPill channel={piece.campaigns.channel} />
+        )}
+        {piece.scheduled_for && (
+          <p className="shrink-0 text-[10px] text-indigo-400/70">
+            {new Date(piece.scheduled_for).toLocaleTimeString("en-US", {
+              hour: "numeric",
+              minute: "2-digit",
+              hour12: true,
+            })}
+          </p>
+        )}
+      </div>
 
-        {/* Row 2: title */}
-        <p className="mt-1 truncate text-xs font-medium text-zinc-300">
-          {piece.title ?? piece.campaigns?.angle ?? "Untitled"}
-        </p>
+      {/* Row 2: title */}
+      <p className="mt-1 truncate text-xs font-medium text-zinc-300">
+        {piece.title ?? piece.campaigns?.angle ?? "Untitled"}
+      </p>
 
-        {/* Row 3: product name */}
+      {/* Row 3: product + status dot */}
+      <div className="mt-0.5 flex items-center gap-1.5">
+        <span className={`h-1.5 w-1.5 shrink-0 rounded-full ${statusDot}`} />
         {piece.products && (
           <p className="truncate text-[10px] text-zinc-600">
             {piece.products.name}
           </p>
         )}
+      </div>
+    </button>
+  );
+}
 
-        {/* Row 4: lifecycle action */}
-        <div className="mt-1.5" onClick={(e) => e.stopPropagation()}>
-          <LifecycleAction
-            pieceId={piece.id}
-            status={piece.status}
-            scheduledFor={piece.scheduled_for}
-            postedAt={piece.posted_at}
-            onStatusChange={onLifecycleChange}
-          />
+// ── Content detail panel (slide-over) ────────────────
+function ContentPanel({
+  piece,
+  onClose,
+  onUnschedule,
+  onLifecycleChange,
+}: {
+  piece: SchedulePiece;
+  onClose: () => void;
+  onUnschedule: () => void;
+  onLifecycleChange: (newStatus: string, scheduledFor?: string | null, postedAt?: string | null) => void;
+}) {
+  // Close on Escape key
+  useEffect(() => {
+    function handleKey(e: KeyboardEvent) {
+      if (e.key === "Escape") onClose();
+    }
+    document.addEventListener("keydown", handleKey);
+    return () => document.removeEventListener("keydown", handleKey);
+  }, [onClose]);
+
+  return (
+    <>
+      {/* Backdrop */}
+      <div
+        className="fixed inset-0 z-40 bg-black/60 backdrop-blur-sm"
+        onClick={onClose}
+      />
+
+      {/* Panel */}
+      <div className="fixed inset-y-0 right-0 z-50 flex w-full max-w-xl flex-col border-l border-white/[0.06] bg-zinc-950 shadow-2xl">
+        {/* Header */}
+        <div className="flex items-start justify-between border-b border-white/[0.06] p-6">
+          <div className="min-w-0 flex-1">
+            <div className="flex flex-wrap items-center gap-2">
+              {piece.campaigns && (
+                <ChannelPill channel={piece.campaigns.channel} />
+              )}
+              <TypePill type={piece.type} />
+            </div>
+            {piece.products && (
+              <p className="mt-2 text-sm font-medium text-zinc-400">
+                {piece.products.name}
+              </p>
+            )}
+            <h2 className="mt-2 text-lg font-semibold">
+              {piece.title ?? piece.campaigns?.angle ?? "Untitled"}
+            </h2>
+            {piece.campaigns?.angle && piece.title && (
+              <p className="mt-1 text-sm italic text-zinc-400">
+                &ldquo;{piece.campaigns.angle}&rdquo;
+              </p>
+            )}
+            {piece.scheduled_for && (
+              <p className="mt-2 text-xs text-indigo-400/80">
+                Scheduled for{" "}
+                {new Date(piece.scheduled_for).toLocaleDateString("en-US", {
+                  weekday: "short",
+                  month: "short",
+                  day: "numeric",
+                })}{" "}
+                at{" "}
+                {new Date(piece.scheduled_for).toLocaleTimeString("en-US", {
+                  hour: "numeric",
+                  minute: "2-digit",
+                  hour12: true,
+                })}
+              </p>
+            )}
+          </div>
+          <button
+            onClick={onClose}
+            className="ml-4 rounded-lg p-2 text-zinc-400 transition-colors hover:bg-white/[0.05] hover:text-zinc-200"
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M18 6 6 18" />
+              <path d="m6 6 12 12" />
+            </svg>
+          </button>
         </div>
-      </button>
 
-      {/* Expanded view */}
-      {expanded && (
-        <div className="border-t border-white/[0.06] p-2">
-          <div className="flex items-center justify-between gap-1">
-            <TypePill type={piece.type} />
-            <div className="flex items-center gap-1">
+        {/* Body */}
+        <div className="flex-1 overflow-y-auto p-6">
+          {/* Actions */}
+          <div className="mb-6 flex items-center justify-between">
+            <LifecycleAction
+              pieceId={piece.id}
+              status={piece.status}
+              scheduledFor={piece.scheduled_for}
+              postedAt={piece.posted_at}
+              onStatusChange={onLifecycleChange}
+            />
+            <div className="flex items-center gap-2">
               <CopyButton text={piece.body} />
-              <button
-                onClick={onUnschedule}
-                title="Unschedule"
-                className="rounded-md p-1 text-zinc-500 transition-colors hover:bg-white/[0.05] hover:text-zinc-300"
-              >
-                <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <path d="M18 6 6 18" />
-                  <path d="m6 6 12 12" />
-                </svg>
-              </button>
+              {piece.status === "scheduled" && (
+                <button
+                  onClick={onUnschedule}
+                  className="rounded-lg border border-white/[0.06] px-3 py-1.5 text-xs font-medium text-zinc-400 transition-colors hover:bg-white/[0.05] hover:text-zinc-200"
+                >
+                  Unschedule
+                </button>
+              )}
             </div>
           </div>
-          <p className="mt-2 whitespace-pre-wrap text-xs leading-relaxed text-zinc-400">
-            {piece.body}
-          </p>
+
+          {/* Content body */}
+          <div className="rounded-xl border border-white/[0.06] bg-white/[0.02] p-5">
+            <p className="whitespace-pre-wrap text-sm leading-relaxed text-zinc-300">
+              {piece.body}
+            </p>
+          </div>
         </div>
-      )}
-    </div>
+      </div>
+    </>
   );
 }
 
