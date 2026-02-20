@@ -47,8 +47,150 @@ export async function activateUser(userId: string) {
 
   revalidatePath("/");
   revalidatePath("/admin");
+  revalidatePath("/admin/users");
 
   return { success: true, emailSent: true };
+}
+
+// ── Invite a user by email ───────────────────────────
+export async function inviteUser(email: string) {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return { error: "Not authenticated" };
+
+  const { data: profile } = await supabase
+    .from("profiles")
+    .select("role")
+    .eq("id", user.id)
+    .single();
+
+  if (profile?.role !== "admin") {
+    return { error: "Only admins can invite users" };
+  }
+
+  const service = createServiceClient();
+
+  const appUrl =
+    process.env.NEXT_PUBLIC_APP_URL || "https://app.easymicrosaas.com";
+
+  const { data, error } = await service.auth.admin.inviteUserByEmail(email, {
+    redirectTo: `${appUrl}/auth/callback`,
+  });
+
+  if (error) return { error: error.message };
+
+  // Set invited user's profile to active (skip waitlist)
+  if (data?.user?.id) {
+    await service
+      .from("profiles")
+      .update({ status: "active" })
+      .eq("id", data.user.id);
+  }
+
+  revalidatePath("/admin");
+  revalidatePath("/admin/users");
+
+  return { success: true };
+}
+
+// ── Load system stats for admin overview ─────────────
+export async function loadSystemStats() {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return { error: "Not authenticated" };
+
+  const { data: profile } = await supabase
+    .from("profiles")
+    .select("role")
+    .eq("id", user.id)
+    .single();
+
+  if (profile?.role !== "admin") {
+    return { error: "Only admins can view system stats" };
+  }
+
+  const service = createServiceClient();
+
+  const [
+    { count: totalUsers },
+    { count: activeUsers },
+    { count: waitlistedUsers },
+    { count: totalProducts },
+    { count: totalGenerations },
+    { count: totalContentPieces },
+    { count: totalClicks },
+  ] = await Promise.all([
+    service.from("profiles").select("*", { count: "exact", head: true }),
+    service
+      .from("profiles")
+      .select("*", { count: "exact", head: true })
+      .eq("status", "active"),
+    service
+      .from("profiles")
+      .select("*", { count: "exact", head: true })
+      .eq("status", "waitlist"),
+    service.from("products").select("*", { count: "exact", head: true }),
+    service.from("generations").select("*", { count: "exact", head: true }),
+    service.from("content_pieces").select("*", { count: "exact", head: true }),
+    service.from("clicks").select("*", { count: "exact", head: true }),
+  ]);
+
+  // Generations this week
+  const weekAgo = new Date();
+  weekAgo.setDate(weekAgo.getDate() - 7);
+  const { count: generationsThisWeek } = await service
+    .from("generations")
+    .select("*", { count: "exact", head: true })
+    .gte("created_at", weekAgo.toISOString());
+
+  // Recent signups (last 10)
+  const { data: recentProfiles } = await service
+    .from("profiles")
+    .select("id, role, status, created_at")
+    .order("created_at", { ascending: false })
+    .limit(10);
+
+  const { data: authData } = await service.auth.admin.listUsers();
+  const authUsers = authData?.users ?? [];
+  const emailMap = new Map<string, string>();
+  for (const au of authUsers) {
+    if (au.email) emailMap.set(au.id, au.email);
+  }
+
+  const { data: waitlistEntries } = await service
+    .from("waitlist")
+    .select("email, source");
+  const sourceMap = new Map<string, string>();
+  for (const w of waitlistEntries ?? []) {
+    sourceMap.set(w.email, w.source);
+  }
+
+  const recentSignups = (recentProfiles ?? []).map((p) => {
+    const email = emailMap.get(p.id) ?? "";
+    return {
+      email,
+      role: p.role as string,
+      status: p.status as string,
+      source: sourceMap.get(email) ?? null,
+      created_at: p.created_at as string,
+    };
+  });
+
+  return {
+    totalUsers: totalUsers ?? 0,
+    activeUsers: activeUsers ?? 0,
+    waitlistedUsers: waitlistedUsers ?? 0,
+    totalProducts: totalProducts ?? 0,
+    totalGenerations: totalGenerations ?? 0,
+    totalContentPieces: totalContentPieces ?? 0,
+    totalClicks: totalClicks ?? 0,
+    generationsThisWeek: generationsThisWeek ?? 0,
+    recentSignups,
+  };
 }
 
 // ── Load all users for admin dashboard ──────────────

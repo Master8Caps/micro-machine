@@ -81,48 +81,97 @@ const settingsItem = {
   ),
 };
 
-const adminItem = {
-  label: "Users",
-  href: "/admin",
-  icon: (
-    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-      <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
-      <circle cx="9" cy="7" r="4" />
-      <path d="M23 21v-2a4 4 0 0 0-3-3.87" />
-      <path d="M16 3.13a4 4 0 0 1 0 7.75" />
-    </svg>
-  ),
-};
+const adminItems = [
+  {
+    label: "System",
+    href: "/admin",
+    icon: (
+      <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M18 20V10" />
+        <path d="M12 20V4" />
+        <path d="M6 20v-6" />
+      </svg>
+    ),
+  },
+  {
+    label: "Users",
+    href: "/admin/users",
+    icon: (
+      <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
+        <circle cx="9" cy="7" r="4" />
+        <path d="M23 21v-2a4 4 0 0 0-3-3.87" />
+        <path d="M16 3.13a4 4 0 0 1 0 7.75" />
+      </svg>
+    ),
+  },
+];
+
+const linkClass = (active: boolean) =>
+  `flex items-center gap-3 rounded-lg px-3 py-2 text-sm transition-all ${
+    active
+      ? "border-l-2 border-indigo-400 bg-indigo-500/[0.08] pl-[10px] font-medium text-zinc-100"
+      : "border-l-2 border-transparent text-zinc-400 hover:bg-white/[0.03] hover:text-zinc-200"
+  }`;
+
+function NavLink({
+  item,
+  active,
+}: {
+  item: { label: string; href: string; icon: React.ReactNode };
+  active: boolean;
+}) {
+  return (
+    <Link key={item.href} href={item.href} className={linkClass(active)}>
+      <span className={active ? "text-indigo-400" : ""}>{item.icon}</span>
+      {item.label}
+    </Link>
+  );
+}
 
 export function SidebarNav() {
   const pathname = usePathname();
   const { role } = useUser();
 
-  const items =
-    role === "admin"
-      ? [...navItems, settingsItem, adminItem]
-      : [...navItems, settingsItem];
+  function isActive(href: string) {
+    if (href === "/") return pathname === "/";
+    if (href === "/admin") return pathname === "/admin";
+    return pathname.startsWith(href);
+  }
 
   return (
-    <nav className="mt-6 space-y-0.5">
-      {items.map((item) => {
-        const active =
-          item.href === "/" ? pathname === "/" : pathname.startsWith(item.href);
-        return (
-          <Link
-            key={item.href}
-            href={item.href}
-            className={`flex items-center gap-3 rounded-lg px-3 py-2 text-sm transition-all ${
-              active
-                ? "border-l-2 border-indigo-400 bg-indigo-500/[0.08] pl-[10px] font-medium text-zinc-100"
-                : "border-l-2 border-transparent text-zinc-400 hover:bg-white/[0.03] hover:text-zinc-200"
-            }`}
-          >
-            <span className={active ? "text-indigo-400" : ""}>{item.icon}</span>
-            {item.label}
-          </Link>
-        );
-      })}
+    <nav className="mt-6 flex flex-1 flex-col">
+      {/* Main nav */}
+      <div className="space-y-0.5">
+        {navItems.map((item) => (
+          <NavLink key={item.href} item={item} active={isActive(item.href)} />
+        ))}
+      </div>
+
+      {/* Settings pinned to bottom */}
+      <div className="mt-auto space-y-0.5">
+        <NavLink item={settingsItem} active={isActive(settingsItem.href)} />
+
+        {/* Admin section */}
+        {role === "admin" && (
+          <div className="mt-2">
+            <div className="border-t border-white/[0.06] px-3 pb-2 pt-4">
+              <p className="text-xs font-medium uppercase tracking-wider text-zinc-600">
+                Admin
+              </p>
+            </div>
+            <div className="space-y-0.5">
+              {adminItems.map((item) => (
+                <NavLink
+                  key={item.href}
+                  item={item}
+                  active={isActive(item.href)}
+                />
+              ))}
+            </div>
+          </div>
+        )}
+      </div>
     </nav>
   );
 }

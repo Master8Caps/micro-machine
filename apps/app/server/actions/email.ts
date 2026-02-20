@@ -1,6 +1,6 @@
 "use server";
 
-import { resend, EMAIL_FROM } from "@/lib/resend";
+import { getResend, EMAIL_FROM } from "@/lib/resend";
 
 const APP_URL = process.env.NEXT_PUBLIC_APP_URL || "https://app.easymicrosaas.com";
 
@@ -72,7 +72,7 @@ export async function sendWaitlistConfirmation(email: string) {
       </table>
     `);
 
-    await resend.emails.send({
+    await getResend().emails.send({
       from: EMAIL_FROM,
       to: email,
       subject: "You're on the list — Easy Micro SaaS",
@@ -112,7 +112,7 @@ export async function sendActivationEmail(email: string) {
       </p>
     `);
 
-    await resend.emails.send({
+    await getResend().emails.send({
       from: EMAIL_FROM,
       to: email,
       subject: "Your account is ready — Easy Micro SaaS",
