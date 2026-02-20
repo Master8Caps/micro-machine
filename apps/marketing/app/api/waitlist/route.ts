@@ -65,7 +65,7 @@ export async function POST(request: Request) {
 <table width="100%" cellpadding="0" cellspacing="0" style="background-color:#09090b;padding:40px 20px;"><tr><td align="center">
 <table width="480" cellpadding="0" cellspacing="0" style="max-width:480px;width:100%;">
 <tr><td align="center" style="padding-bottom:32px;">
-  <img src="https://easymicrosaas.com/favicon.svg" width="40" height="40" alt="Easy Micro SaaS" style="display:block;" />
+  <img src="https://easymicrosaas.com/logo.png" width="40" height="40" alt="Easy Micro SaaS" style="display:block;" />
 </td></tr>
 <tr><td style="background-color:#18181b;border:1px solid rgba(255,255,255,0.06);border-radius:12px;padding:32px;">
   <h1 style="margin:0 0 16px;font-size:22px;font-weight:700;color:#fafafa;">You're on the list</h1>
