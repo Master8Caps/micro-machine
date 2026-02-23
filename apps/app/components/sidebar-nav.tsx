@@ -148,13 +148,11 @@ export function SidebarNav() {
         ))}
       </div>
 
-      {/* Settings pinned to bottom */}
+      {/* Bottom section */}
       <div className="mt-auto space-y-0.5">
-        <NavLink item={settingsItem} active={isActive(settingsItem.href)} />
-
-        {/* Admin section */}
+        {/* Admin section (above settings) */}
         {role === "admin" && (
-          <div className="mt-2">
+          <div className="mb-2">
             <div className="border-t border-white/[0.06] px-3 pb-2 pt-4">
               <p className="text-xs font-medium uppercase tracking-wider text-zinc-600">
                 Admin
@@ -171,6 +169,9 @@ export function SidebarNav() {
             </div>
           </div>
         )}
+
+        {/* Settings pinned directly above user info */}
+        <NavLink item={settingsItem} active={isActive(settingsItem.href)} />
       </div>
     </nav>
   );

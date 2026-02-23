@@ -19,8 +19,8 @@ export default async function DashboardLayout({
 
   return (
     <UserProvider email={user.email ?? ""} role={role}>
-      <div className="flex min-h-screen">
-        <aside className="flex w-60 flex-col border-r border-white/[0.06] px-4 py-5">
+      <div className="flex h-screen">
+        <aside className="flex w-60 shrink-0 flex-col overflow-y-auto border-r border-white/[0.06] px-4 py-5">
           <Link href="/" className="flex items-center gap-2.5 px-3">
             <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 32 32" className="shrink-0">
               <path d="M16,3 Q21,10 21,18 Q21,24 16,24 Q11,24 11,18 Q11,10 16,3Z" fill="#6366f1"/>

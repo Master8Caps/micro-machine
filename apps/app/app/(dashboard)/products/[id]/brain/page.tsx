@@ -10,6 +10,11 @@ import {
   generateContentBulk,
   loadContentForCampaign,
 } from "@/server/actions/content";
+import {
+  loadPerformanceScores,
+  type PerformanceData,
+} from "@/server/actions/performance";
+import { getScoreTier, scoreBarColor, scoreTextColor } from "@/lib/score-utils";
 import { ChannelPill, TypePill } from "@/components/pills";
 import { CopyButton } from "@/components/copy-button";
 import { useUser } from "@/components/user-context";
@@ -104,6 +109,8 @@ export default function BrainPage() {
   const [deleting, setDeleting] = useState(false);
   const [avatars, setAvatars] = useState<DbAvatar[]>([]);
   const [editingAvatar, setEditingAvatar] = useState<DbAvatar | null>(null);
+  const [performanceData, setPerformanceData] = useState<PerformanceData | null>(null);
+  const [perfPeriod, setPerfPeriod] = useState<"all" | "30d" | "7d">("all");
 
   // Content generation state
   const [contentByCampaign, setContentByCampaign] = useState<Record<string, ContentPiece[]>>({});
@@ -191,6 +198,14 @@ export default function BrainPage() {
       cancelled = true;
     };
   }, [productId]);
+
+  // Load performance scores when brain is loaded or period changes
+  useEffect(() => {
+    if (status !== "done") return;
+    loadPerformanceScores({ productId, period: perfPeriod }).then((result) => {
+      if ("campaigns" in result) setPerformanceData(result);
+    });
+  }, [productId, status, perfPeriod]);
 
   const handleRegenerate = useCallback(async () => {
     setStatus("generating");
@@ -409,7 +424,25 @@ export default function BrainPage() {
         {/* Avatars */}
         {avatars.length > 0 && (
         <section className="mb-12">
-          <h2 className="text-xl font-bold">Target Avatars</h2>
+          <div className="flex items-center justify-between">
+            <h2 className="text-xl font-bold">Target Avatars</h2>
+            <div className="flex items-center gap-1.5">
+              <span className="mr-1 text-xs text-zinc-500">Performance:</span>
+              {(["all", "30d", "7d"] as const).map((p) => (
+                <button
+                  key={p}
+                  onClick={() => setPerfPeriod(p)}
+                  className={`rounded-md px-2.5 py-1 text-xs font-medium transition-colors ${
+                    perfPeriod === p
+                      ? "bg-indigo-500/20 text-indigo-300"
+                      : "text-zinc-500 hover:text-zinc-300"
+                  }`}
+                >
+                  {p === "all" ? "All time" : p === "30d" ? "30 days" : "7 days"}
+                </button>
+              ))}
+            </div>
+          </div>
           <div className="mt-6 grid gap-6 md:grid-cols-2 lg:grid-cols-3">
             {avatars.map((avatar) => (
               <div key={avatar.id} className="group relative flex flex-col rounded-xl border border-white/[0.06] bg-white/[0.02] p-6">
@@ -458,6 +491,41 @@ export default function BrainPage() {
                     </p>
                   </div>
                 </div>
+
+                {/* Performance score */}
+                {performanceData && (() => {
+                  const avatarScore = performanceData.avatars.find((a) => a.avatarId === avatar.id);
+                  if (!avatarScore || !performanceData.hasData) return null;
+                  const tier = getScoreTier(avatarScore.normalizedScore);
+                  return (
+                    <div className="mt-4 border-t border-white/[0.06] pt-4">
+                      <div className="flex items-center justify-between">
+                        <span className="text-xs font-medium uppercase tracking-wider text-zinc-500">
+                          Performance
+                        </span>
+                        <span className="text-xs tabular-nums text-zinc-500">
+                          {avatarScore.totalClicks} click{avatarScore.totalClicks === 1 ? "" : "s"}
+                        </span>
+                      </div>
+                      <div className="mt-2 h-1.5 w-full rounded-full bg-white/[0.06]">
+                        <div
+                          className={`h-1.5 rounded-full ${scoreBarColor(tier.color)}`}
+                          style={{ width: `${Math.max(avatarScore.normalizedScore, avatarScore.totalClicks > 0 ? 4 : 0)}%` }}
+                        />
+                      </div>
+                      <div className="mt-1 flex items-center justify-between">
+                        <span className={`text-xs font-medium ${scoreTextColor(tier.color)}`}>
+                          {tier.label}
+                        </span>
+                        {avatarScore.topChannel && (
+                          <span className="text-xs text-zinc-600">
+                            Best: {avatarScore.topChannel}
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })()}
               </div>
             ))}
           </div>
@@ -504,6 +572,7 @@ export default function BrainPage() {
               const pieces = contentByCampaign[campaign.id];
               const isGenerating = generatingCampaigns.has(campaign.id);
               const isExpanded = expandedCampaigns.has(campaign.id);
+              const cs = performanceData?.campaigns.find((c) => c.campaignId === campaign.id);
 
               return (
                 <CampaignCard
@@ -515,6 +584,7 @@ export default function BrainPage() {
                   isExpanded={isExpanded}
                   onGenerate={() => handleGenerateContent(campaign.id)}
                   onToggleExpand={() => toggleExpanded(campaign.id)}
+                  score={cs ? { totalClicks: cs.totalClicks, normalizedScore: cs.normalizedScore, linkCount: cs.linkCount } : null}
                 />
               );
             })}
@@ -549,6 +619,7 @@ export default function BrainPage() {
                   const pieces = contentByCampaign[campaign.id];
                   const isGenerating = generatingCampaigns.has(campaign.id);
                   const isExpanded = expandedCampaigns.has(campaign.id);
+                  const cs = performanceData?.campaigns.find((c) => c.campaignId === campaign.id);
 
                   return (
                     <CampaignCard
@@ -560,6 +631,7 @@ export default function BrainPage() {
                       isExpanded={isExpanded}
                       onGenerate={() => handleGenerateContent(campaign.id)}
                       onToggleExpand={() => toggleExpanded(campaign.id)}
+                      score={cs ? { totalClicks: cs.totalClicks, normalizedScore: cs.normalizedScore, linkCount: cs.linkCount } : null}
                     />
                   );
                 })}
@@ -682,6 +754,7 @@ function CampaignCard({
   isExpanded,
   onGenerate,
   onToggleExpand,
+  score,
 }: {
   campaign: DbCampaign;
   avatarName: string;
@@ -690,6 +763,7 @@ function CampaignCard({
   isExpanded: boolean;
   onGenerate: () => void;
   onToggleExpand: () => void;
+  score?: { totalClicks: number; normalizedScore: number; linkCount: number } | null;
 }) {
   return (
     <div className="rounded-xl border border-white/[0.06] bg-white/[0.02] p-6">
@@ -700,6 +774,21 @@ function CampaignCard({
       </div>
       <h3 className="mt-3 font-semibold">{campaign.angle}</h3>
       <p className="mt-2 text-sm italic text-zinc-300">&ldquo;{campaign.hook}&rdquo;</p>
+
+      {/* Performance indicator */}
+      {score && score.linkCount > 0 && (
+        <div className="mt-3 flex items-center gap-3">
+          <div className="h-1 flex-1 rounded-full bg-white/[0.06]">
+            <div
+              className={`h-1 rounded-full ${scoreBarColor(getScoreTier(score.normalizedScore).color)}`}
+              style={{ width: `${Math.max(score.normalizedScore, score.totalClicks > 0 ? 4 : 0)}%` }}
+            />
+          </div>
+          <span className="shrink-0 text-xs tabular-nums text-zinc-500">
+            {score.totalClicks} click{score.totalClicks === 1 ? "" : "s"}
+          </span>
+        </div>
+      )}
 
       {/* Content generation section */}
       <div className="mt-4 flex items-center justify-between border-t border-white/[0.06] pt-4">

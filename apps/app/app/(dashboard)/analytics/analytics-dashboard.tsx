@@ -1,7 +1,12 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { CopyButton } from "@/components/copy-button";
+import {
+  loadPerformanceScores,
+  type PerformanceData,
+} from "@/server/actions/performance";
+import { getScoreTier, scoreBarColor } from "@/lib/score-utils";
 
 interface LinkRow {
   id: string;
@@ -31,6 +36,20 @@ export function AnalyticsDashboard({
   recentClicks,
 }: AnalyticsDashboardProps) {
   const [productFilter, setProductFilter] = useState("");
+  const [perfData, setPerfData] = useState<PerformanceData | null>(null);
+  const [perfLoading, setPerfLoading] = useState(false);
+
+  useEffect(() => {
+    if (!productFilter) {
+      setPerfData(null);
+      return;
+    }
+    setPerfLoading(true);
+    loadPerformanceScores({ productId: productFilter }).then((result) => {
+      if ("campaigns" in result) setPerfData(result);
+      setPerfLoading(false);
+    });
+  }, [productFilter]);
 
   const baseUrl = typeof window !== "undefined"
     ? window.location.origin
@@ -252,6 +271,111 @@ export function AnalyticsDashboard({
               </div>
             </div>
           </div>
+
+          {/* Performance Scores — shown when a product is selected */}
+          {productFilter && perfLoading && (
+            <div className="mt-8 flex justify-center py-8">
+              <div className="h-6 w-6 animate-spin rounded-full border-2 border-indigo-400/30 border-t-indigo-400" />
+            </div>
+          )}
+          {productFilter && perfData && perfData.hasData && !perfLoading && (
+            <div className="mt-8">
+              <h3 className="mb-4 text-sm font-medium uppercase tracking-wider text-zinc-500">
+                Performance Scores
+              </h3>
+              <div className="grid gap-6 lg:grid-cols-3">
+                {/* By Avatar */}
+                <div className="rounded-xl border border-white/[0.06] bg-white/[0.02] p-6">
+                  <h4 className="mb-4 text-sm font-medium text-zinc-400">By Avatar</h4>
+                  <div className="space-y-3">
+                    {[...perfData.avatars]
+                      .sort((a, b) => b.normalizedScore - a.normalizedScore)
+                      .map((avatar) => {
+                        const tier = getScoreTier(avatar.normalizedScore);
+                        return (
+                          <div key={avatar.avatarId}>
+                            <div className="mb-1 flex items-center justify-between text-sm">
+                              <span className="truncate pr-2 text-zinc-300">{avatar.name}</span>
+                              <span className="shrink-0 tabular-nums text-zinc-500">
+                                {avatar.totalClicks}
+                              </span>
+                            </div>
+                            <div className="h-2 w-full rounded-full bg-white/[0.06]">
+                              <div
+                                className={`h-2 rounded-full ${scoreBarColor(tier.color)}`}
+                                style={{ width: `${Math.max(avatar.normalizedScore, avatar.totalClicks > 0 ? 4 : 0)}%` }}
+                              />
+                            </div>
+                          </div>
+                        );
+                      })}
+                  </div>
+                </div>
+
+                {/* By Channel */}
+                <div className="rounded-xl border border-white/[0.06] bg-white/[0.02] p-6">
+                  <h4 className="mb-4 text-sm font-medium text-zinc-400">By Channel</h4>
+                  <div className="space-y-3">
+                    {perfData.channels.map((ch) => {
+                      const tier = getScoreTier(ch.normalizedScore);
+                      return (
+                        <div key={ch.channel}>
+                          <div className="mb-1 flex items-center justify-between text-sm">
+                            <span className="text-zinc-300">{ch.channel}</span>
+                            <span className="tabular-nums text-zinc-500">
+                              {ch.totalClicks}
+                            </span>
+                          </div>
+                          <div className="h-2 w-full rounded-full bg-white/[0.06]">
+                            <div
+                              className={`h-2 rounded-full ${scoreBarColor(tier.color)}`}
+                              style={{ width: `${Math.max(ch.normalizedScore, ch.totalClicks > 0 ? 4 : 0)}%` }}
+                            />
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                {/* Top Campaign Angles */}
+                <div className="rounded-xl border border-white/[0.06] bg-white/[0.02] p-6">
+                  <h4 className="mb-4 text-sm font-medium text-zinc-400">Top Campaign Angles</h4>
+                  <div className="space-y-3">
+                    {[...perfData.campaigns]
+                      .sort((a, b) => b.normalizedScore - a.normalizedScore)
+                      .slice(0, 8)
+                      .map((c) => {
+                        const tier = getScoreTier(c.normalizedScore);
+                        return (
+                          <div key={c.campaignId}>
+                            <div className="mb-1 flex items-center justify-between text-sm">
+                              <span className="truncate pr-2 text-zinc-300">{c.angle}</span>
+                              <span className="shrink-0 tabular-nums text-zinc-500">
+                                {c.totalClicks}
+                              </span>
+                            </div>
+                            <div className="h-1.5 w-full rounded-full bg-white/[0.06]">
+                              <div
+                                className={`h-1.5 rounded-full ${scoreBarColor(tier.color)}`}
+                                style={{ width: `${Math.max(c.normalizedScore, c.totalClicks > 0 ? 4 : 0)}%` }}
+                              />
+                            </div>
+                          </div>
+                        );
+                      })}
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+          {productFilter && perfData && !perfData.hasData && !perfLoading && (
+            <div className="mt-8 rounded-xl border border-dashed border-white/[0.08] p-8 text-center">
+              <p className="text-sm text-zinc-500">
+                No performance data yet. Scores will appear once tracked links receive clicks.
+              </p>
+            </div>
+          )}
         </>
       )}
     </>
