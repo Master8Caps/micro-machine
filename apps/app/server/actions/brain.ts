@@ -2,6 +2,7 @@
 
 import Anthropic from "@anthropic-ai/sdk";
 import { createClient } from "@/lib/supabase/server";
+import { loadLearningInsights, type LearningInsight } from "./learning";
 
 const anthropic = new Anthropic();
 
@@ -100,13 +101,21 @@ export async function generateBrain(input: GenerateBrainInput) {
   }
 
   try {
+    let prompt = buildPrompt(product);
+
+    // Inject performance context if available
+    const insights = await loadLearningInsights(input.productId);
+    if (insights) {
+      prompt += buildPerformanceContext(insights);
+    }
+
     const message = await anthropic.messages.create({
       model: "claude-sonnet-4-20250514",
       max_tokens: 8192,
       messages: [
         {
           role: "user",
-          content: buildPrompt(product),
+          content: prompt,
         },
       ],
     });
@@ -280,6 +289,47 @@ export async function generateBrain(input: GenerateBrainInput) {
       error: err instanceof Error ? err.message : "Generation failed",
     };
   }
+}
+
+function buildPerformanceContext(insights: LearningInsight): string {
+  const sections: string[] = [];
+
+  if (insights.totalPiecesWithSignals < 5) {
+    sections.push("NOTE: Limited performance data available — treat these insights as directional, not definitive.\n");
+  }
+
+  if (insights.topPerformers.length > 0) {
+    const topLines = insights.topPerformers.map(
+      (p) => `- Avatar "${p.avatarName}" / "${p.angle}" on ${p.channel} (${p.clicks} clicks, engagement score ${p.engagementRaw})`,
+    );
+    sections.push(`Top performing campaigns:\n${topLines.join("\n")}`);
+  }
+
+  if (insights.patterns.topPainPoints.length > 0) {
+    sections.push(`Pain points that resonate most: ${insights.patterns.topPainPoints.join(", ")}`);
+  }
+  if (insights.patterns.topChannels.length > 0) {
+    sections.push(`Best performing channels: ${insights.patterns.topChannels.join(", ")}`);
+  }
+  if (insights.patterns.topContentTypes.length > 0) {
+    sections.push(`Best content types: ${insights.patterns.topContentTypes.join(", ")}`);
+  }
+  if (insights.patterns.styleCues.length > 0) {
+    sections.push(`Winning content style: ${insights.patterns.styleCues.join(", ")}`);
+  }
+
+  const avoidLines: string[] = [];
+  for (const u of insights.underperformers) {
+    avoidLines.push(`- "${u.angle}" on ${u.channel} (score: ${u.compositeScore}/100)`);
+  }
+  for (const td of insights.thumbsDownPieces) {
+    avoidLines.push(`- "${td.angle}" on ${td.channel} (user rejected this style)`);
+  }
+  if (avoidLines.length > 0) {
+    sections.push(`What to avoid:\n${avoidLines.join("\n")}`);
+  }
+
+  return `\n\n## Performance Context from Previous Campaigns\nYour previous output was tested in the real world. Here's what we learned:\n\n${sections.join("\n\n")}\n\nUse these insights when generating new avatars and campaigns. Evolve what works, retire what doesn't, and experiment with new angles informed by these patterns.`;
 }
 
 function buildPrompt(product: {
