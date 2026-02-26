@@ -5,6 +5,8 @@ import { ChannelPill, TypePill, ArchivedBadge, ArchiveToggle } from "@/component
 import { CopyButton } from "@/components/copy-button";
 import { LifecycleAction } from "@/components/lifecycle-action";
 import { DatePicker } from "@/components/date-picker";
+import { RatingButtons } from "@/components/rating-buttons";
+import { EngagementPopover } from "@/components/engagement-popover";
 import {
   toggleContentPieceArchived,
   updateContentPiecesStatusBulk,
@@ -32,6 +34,12 @@ interface ContentPieceRow {
   products: { name: string } | null;
   campaigns: { angle: string; channel: string; category?: string } | null;
   links?: TrackedLink[];
+  rating: number | null;
+  engagement_views: number | null;
+  engagement_likes: number | null;
+  engagement_comments: number | null;
+  engagement_shares: number | null;
+  engagement_logged_at: string | null;
 }
 
 const typeOptions = [
@@ -425,6 +433,19 @@ export function ContentList({
                     )}
                   </div>
                   <div className="flex shrink-0 items-center gap-2">
+                    <RatingButtons pieceId={piece.id} initialRating={piece.rating} />
+                    {piece.status === "posted" && (
+                      <EngagementPopover
+                        pieceId={piece.id}
+                        initial={{
+                          views: piece.engagement_views,
+                          likes: piece.engagement_likes,
+                          comments: piece.engagement_comments,
+                          shares: piece.engagement_shares,
+                          loggedAt: piece.engagement_logged_at,
+                        }}
+                      />
+                    )}
                     <CopyButton text={piece.body} />
                     <LifecycleAction
                       pieceId={piece.id}
