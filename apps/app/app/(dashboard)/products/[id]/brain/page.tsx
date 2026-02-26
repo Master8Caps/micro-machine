@@ -503,8 +503,9 @@ export default function BrainPage() {
                         <span className="text-xs font-medium uppercase tracking-wider text-zinc-500">
                           Performance
                         </span>
-                        <span className="text-xs tabular-nums text-zinc-500">
-                          {avatarScore.totalClicks} click{avatarScore.totalClicks === 1 ? "" : "s"}
+                        <span className={`text-xs ${scoreTextColor(tier.color)}`}>
+                          {tier.label}
+                          {avatarScore.totalClicks > 0 && ` · ${avatarScore.totalClicks} clicks`}
                         </span>
                       </div>
                       <div className="mt-2 h-1.5 w-full rounded-full bg-white/[0.06]">
@@ -584,7 +585,7 @@ export default function BrainPage() {
                   isExpanded={isExpanded}
                   onGenerate={() => handleGenerateContent(campaign.id)}
                   onToggleExpand={() => toggleExpanded(campaign.id)}
-                  score={cs ? { totalClicks: cs.totalClicks, normalizedScore: cs.normalizedScore, linkCount: cs.linkCount } : null}
+                  score={cs ? { totalClicks: cs.totalClicks, normalizedScore: cs.normalizedScore, linkCount: cs.linkCount, engagementRaw: cs.engagementRaw } : null}
                 />
               );
             })}
@@ -631,7 +632,7 @@ export default function BrainPage() {
                       isExpanded={isExpanded}
                       onGenerate={() => handleGenerateContent(campaign.id)}
                       onToggleExpand={() => toggleExpanded(campaign.id)}
-                      score={cs ? { totalClicks: cs.totalClicks, normalizedScore: cs.normalizedScore, linkCount: cs.linkCount } : null}
+                      score={cs ? { totalClicks: cs.totalClicks, normalizedScore: cs.normalizedScore, linkCount: cs.linkCount, engagementRaw: cs.engagementRaw } : null}
                     />
                   );
                 })}
@@ -763,7 +764,7 @@ function CampaignCard({
   isExpanded: boolean;
   onGenerate: () => void;
   onToggleExpand: () => void;
-  score?: { totalClicks: number; normalizedScore: number; linkCount: number } | null;
+  score?: { totalClicks: number; normalizedScore: number; linkCount: number; engagementRaw: number } | null;
 }) {
   return (
     <div className="rounded-xl border border-white/[0.06] bg-white/[0.02] p-6">
@@ -776,7 +777,7 @@ function CampaignCard({
       <p className="mt-2 text-sm italic text-zinc-300">&ldquo;{campaign.hook}&rdquo;</p>
 
       {/* Performance indicator */}
-      {score && score.linkCount > 0 && (
+      {score && (score.linkCount > 0 || score.engagementRaw > 0) && (
         <div className="mt-3 flex items-center gap-3">
           <div className="h-1 flex-1 rounded-full bg-white/[0.06]">
             <div
@@ -785,7 +786,9 @@ function CampaignCard({
             />
           </div>
           <span className="shrink-0 text-xs tabular-nums text-zinc-500">
-            {score.totalClicks} click{score.totalClicks === 1 ? "" : "s"}
+            {score.totalClicks > 0 ? `${score.totalClicks} clicks` : ""}
+            {score.totalClicks > 0 && score.engagementRaw > 0 ? " · " : ""}
+            {score.engagementRaw > 0 ? `${score.engagementRaw} eng.` : ""}
           </span>
         </div>
       )}
