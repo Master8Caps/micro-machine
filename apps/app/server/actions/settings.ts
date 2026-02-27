@@ -21,6 +21,25 @@ export async function updateProfile(fullName: string) {
   return { success: true };
 }
 
+export async function activateInvitedUser() {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return { error: "Not authenticated" };
+
+  // Only transition from 'invited' to 'active'
+  const { error } = await supabase
+    .from("profiles")
+    .update({ status: "active" })
+    .eq("id", user.id)
+    .eq("status", "invited");
+
+  if (error) return { error: error.message };
+
+  return { success: true };
+}
+
 export async function updatePassword(
   currentPassword: string,
   newPassword: string,

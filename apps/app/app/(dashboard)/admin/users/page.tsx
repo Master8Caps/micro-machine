@@ -23,6 +23,7 @@ export default function AdminUsersPage() {
   const router = useRouter();
   const { role } = useUser();
   const [waitlisted, setWaitlisted] = useState<UserRow[]>([]);
+  const [invited, setInvited] = useState<UserRow[]>([]);
   const [active, setActive] = useState<UserRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [activatingIds, setActivatingIds] = useState<Set<string>>(new Set());
@@ -47,6 +48,7 @@ export default function AdminUsersPage() {
     async function load() {
       const result = await loadAdminUsers();
       if (result.waitlisted) setWaitlisted(result.waitlisted);
+      if (result.invited) setInvited(result.invited);
       if (result.active) setActive(result.active);
       setLoading(false);
     }
@@ -97,6 +99,7 @@ export default function AdminUsersPage() {
       // Reload users to show the new invited user
       const refreshed = await loadAdminUsers();
       if (refreshed.waitlisted) setWaitlisted(refreshed.waitlisted);
+      if (refreshed.invited) setInvited(refreshed.invited);
       if (refreshed.active) setActive(refreshed.active);
     }
     setInviting(false);
@@ -186,6 +189,54 @@ export default function AdminUsersPage() {
           </div>
         ) : (
           <>
+            {/* Pending Invites */}
+            <section className="mt-10">
+              <div className="flex items-center gap-3">
+                <h2 className="text-lg font-semibold">Pending Invites</h2>
+                <span className="rounded-full border border-sky-500/30 bg-sky-500/10 px-2.5 py-0.5 text-xs font-medium text-sky-400">
+                  {invited.length}
+                </span>
+              </div>
+
+              {invited.length === 0 ? (
+                <div className="mt-4 rounded-xl border border-dashed border-white/[0.08] p-8 text-center">
+                  <p className="text-sm text-zinc-500">
+                    No pending invitations
+                  </p>
+                </div>
+              ) : (
+                <div className="mt-4 overflow-hidden rounded-xl border border-white/[0.06]">
+                  <table className="w-full">
+                    <thead>
+                      <tr className="border-b border-white/[0.06] bg-white/[0.02]">
+                        <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-zinc-500">
+                          Email
+                        </th>
+                        <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-zinc-500">
+                          Invited
+                        </th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {invited.map((user) => (
+                        <tr
+                          key={user.id}
+                          className="border-b border-white/[0.04] last:border-0"
+                        >
+                          <td className="px-4 py-3 text-sm text-zinc-200">
+                            {user.email}
+                          </td>
+                          <td className="px-4 py-3 text-sm text-zinc-500">
+                            {formatDate(user.created_at)}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </section>
+
             {/* Waitlist Queue */}
             <section className="mt-10">
               <div className="flex items-center gap-3">

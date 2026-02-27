@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
-import { updateProfile } from "@/server/actions/settings";
+import { updateProfile, activateInvitedUser } from "@/server/actions/settings";
 
 export default function SetupPage() {
   const router = useRouter();
@@ -47,6 +47,9 @@ export default function SetupPage() {
         return;
       }
     }
+
+    // Move invited users to active status
+    await activateInvitedUser();
 
     router.push("/");
     router.refresh();

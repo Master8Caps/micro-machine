@@ -81,11 +81,11 @@ export async function inviteUser(email: string) {
 
   if (error) return { error: error.message };
 
-  // Set invited user's profile to active (skip waitlist)
+  // Set invited user's profile to 'invited' (pending until they complete setup)
   if (data?.user?.id) {
     await service
       .from("profiles")
-      .update({ status: "active" })
+      .update({ status: "invited" })
       .eq("id", data.user.id);
   }
 
@@ -258,6 +258,7 @@ export async function loadAdminUsers() {
 
   return {
     waitlisted: users.filter((u) => u.status === "waitlist"),
+    invited: users.filter((u) => u.status === "invited"),
     active: users.filter((u) => u.status === "active"),
   };
 }
